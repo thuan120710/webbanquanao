@@ -29,6 +29,14 @@ const categorySchema = mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    },
     order: {
       type: Number,
       required: false,
@@ -58,6 +66,11 @@ categorySchema.methods.isActiveCategory = function() {
   return this.isActive;
 };
 
+// Phương thức kiểm tra xem danh mục đã bị xóa mềm không
+categorySchema.methods.isDeletedCategory = function() {
+  return this.isDeleted;
+};
+
 // Phương thức tạo slug từ tên danh mục
 categorySchema.statics.generateSlug = function(name) {
   return slugify(name, {
@@ -67,6 +80,15 @@ categorySchema.statics.generateSlug = function(name) {
     trim: true
   });
 };
+
+// Middleware để thêm điều kiện tìm kiếm không bao gồm các danh mục đã xóa mềm
+categorySchema.pre('find', function() {
+  this.where({ isDeleted: false });
+});
+
+categorySchema.pre('findOne', function() {
+  this.where({ isDeleted: false });
+});
 
 const Category = mongoose.model('Category', categorySchema);
 
