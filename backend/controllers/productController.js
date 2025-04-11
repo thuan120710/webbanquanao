@@ -1,117 +1,130 @@
 const asyncHandler = require("express-async-handler");
 const Product = require("../models/Product");
 
-// Lấy tất cả sản phẩm
+/**
+ * Lấy tất cả sản phẩm
+ * GET /api/products
+ */
 const getProducts = asyncHandler(async (req, res) => {
-  try {
-    const pageSize = 10;
-    const page = Number(req.query.pageNumber) || 1;
+  const { showDeleted, keyword, category, brand, minPrice, maxPrice, sort } = req.query;
 
-    const keyword = req.query.keyword
-      ? {
-          name: { $regex: req.query.keyword, $options: "i" },
-        }
-      : {};
-
-    if (req.query.category) keyword.category = req.query.category;
-    if (req.query.brand) keyword.brand = req.query.brand;
-
-    const count = await Product.countDocuments({ ...keyword });
-    const products = await Product.find({ ...keyword })
-      .populate('brand', 'name')
-      .populate('category', 'name')
-      .limit(pageSize)
-      .skip(pageSize * (page - 1));
-
-    console.log('Products with populated data:', products);
-    
-    res.json({
-      products,
-      page,
-      pages: Math.ceil(count / pageSize),
-      pageSize,
-      totalProducts: count,
-    });
-  } catch (error) {
-    console.error('Error in getProducts:', error);
-    res.status(500).json({ message: error.message });
+  // Xây dựng điều kiện tìm kiếm
+  const query = {};
+  
+  // Nếu không yêu cầu hiển thị sản phẩm đã xóa, chỉ lấy sản phẩm chưa xóa
+  if (!showDeleted) {
+    query.isDeleted = false;
   }
+
+  // Tìm kiếm theo từ khóa
+  if (keyword) {
+    query.name = {
+      $regex: keyword,
+      $options: 'i'
+    };
+  }
+
+  // Lọc theo danh mục
+  if (category) {
+    query.category = category;
+  }
+
+  // Lọc theo thương hiệu
+  if (brand) {
+    query.brand = brand;
+  }
+
+  // Lọc theo giá
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = Number(minPrice);
+    if (maxPrice) query.price.$lte = Number(maxPrice);
+  }
+
+  // Sắp xếp
+  let sortOption = {};
+  if (sort) {
+    switch (sort) {
+      case 'price_asc':
+        sortOption = { price: 1 };
+        break;
+      case 'price_desc':
+        sortOption = { price: -1 };
+        break;
+      case 'rating':
+        sortOption = { rating: -1 };
+        break;
+      case 'newest':
+        sortOption = { createdAt: -1 };
+        break;
+      default:
+        sortOption = { createdAt: -1 };
+    }
+  }
+
+  const products = await Product.find(query)
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .sort(sortOption);
+
+  res.json(products);
 });
 
-// Lấy chi tiết sản phẩm theo ID
+/**
+ * Lấy sản phẩm theo ID
+ *  GET /api/products/:id
+ */
 const getProductById = asyncHandler(async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id)
-      .populate('brand', 'name')
-      .populate('category', 'name');
+  const product = await Product.findById(req.params.id)
+    .populate('category', 'name')
+    .populate('brand', 'name');
 
-    if (product) {
-      console.log('Product with populated data:', product);
-      res.json(product);
-    } else {
-      res.status(404);
-      throw new Error("Không tìm thấy sản phẩm");
-    }
-  } catch (error) {
-    console.error('Error in getProductById:', error);
-    res.status(500).json({ message: error.message });
+  if (product) {
+    res.json(product);
+  } else {
+    res.status(404);
+    throw new Error('Không tìm thấy sản phẩm');
   }
 });
 
-// Xóa sản phẩm
+/**
+ * Xóa mềm sản phẩm
+ * DELETE /api/products/:id
+ */
 const deleteProduct = asyncHandler(async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id); // Lấy sản phẩm theo ID
+  const product = await Product.findById(req.params.id);
 
-    if (!product) {
-      console.log(`Không tìm thấy sản phẩm với ID: ${req.params.id}`);
-      res.status(404);
-      throw new Error("Không tìm thấy sản phẩm");
-    }
+  if (product) {
+    // Thực hiện xóa mềm
+    product.isDeleted = true;
+    product.deletedAt = new Date();
+    await product.save();
 
-    // Xóa sản phẩm bằng findByIdAndDelete
-    await Product.findByIdAndDelete(req.params.id);
-
-    console.log(`Sản phẩm đã được xóa: ${product.name}`);
-    res.json({ message: "Sản phẩm đã được xóa" });
-  } catch (error) {
-    console.error(`Lỗi khi xóa sản phẩm: ${error.message}`); // Log chi tiết lỗi
-    res
-      .status(500)
-      .json({ message: "Lỗi khi xóa sản phẩm", error: error.message });
+    res.json({ 
+      message: 'Sản phẩm đã được xóa thành công',
+      product: {
+        _id: product._id,
+        name: product.name,
+        deletedAt: product.deletedAt
+      }
+    });
+  } else {
+    res.status(404);
+    throw new Error('Không tìm thấy sản phẩm');
   }
 });
 
+/**
+ * Tạo sản phẩm mới
+ * POST /api/products
+ */
 const createProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, image, brand, category, countInStock } =
-    req.body;
-
-  // Log dữ liệu nhận được từ frontend
-  console.log("Dữ liệu sản phẩm nhận được:", req.body); // Log toàn bộ dữ liệu nhận được từ frontend
+  const { name, price, description, image, brand, category, countInStock } = req.body;
 
   // Kiểm tra dữ liệu có hợp lệ không
-  if (
-    !name ||
-    !price ||
-    !description ||
-    !image ||
-    !brand ||
-    !category ||
-    countInStock === undefined
-  ) {
-    // Log thông báo nếu thiếu trường nào
-    console.log("Thiếu thông tin sản phẩm:", {
-      name,
-      price,
-      description,
-      image,
-      brand,
-      category,
-      countInStock,
-    });
-
+  if (!name || !price || !description || !image || !brand || !category || countInStock === undefined) {
     res.status(400);
-    throw new Error("Thiếu thông tin sản phẩm");
+    throw new Error('Thiếu thông tin sản phẩm');
   }
 
   try {
@@ -125,20 +138,23 @@ const createProduct = asyncHandler(async (req, res) => {
       countInStock,
       rating: 0,
       numReviews: 0,
+      isDeleted: false,
+      deletedAt: null
     });
 
     const createdProduct = await product.save();
     res.status(201).json(createdProduct);
   } catch (error) {
-    console.error("Lỗi khi tạo sản phẩm:", error); // Log lỗi chi tiết
-    res.status(500).json({ message: "Lỗi khi thêm sản phẩm" });
+    res.status(500).json({ message: 'Lỗi khi thêm sản phẩm' });
   }
 });
 
-// Cập nhật thông tin sản phẩm
+/**
+ Cập nhật sản phẩm
+ PUT /api/products/:id
+ */
 const updateProduct = asyncHandler(async (req, res) => {
-  const { name, price, description, image, brand, category, countInStock } =
-    req.body;
+  const { name, price, description, image, brand, category, countInStock } = req.body;
   const product = await Product.findById(req.params.id);
 
   if (product) {
@@ -148,18 +164,21 @@ const updateProduct = asyncHandler(async (req, res) => {
     product.image = image || product.image;
     product.brand = brand || product.brand;
     product.category = category || product.category;
-    product.countInStock =
-      countInStock !== undefined ? countInStock : product.countInStock;
+    product.countInStock = countInStock !== undefined ? countInStock : product.countInStock;
 
     const updatedProduct = await product.save();
     res.json(updatedProduct);
   } else {
     res.status(404);
-    throw new Error("Không tìm thấy sản phẩm");
+    throw new Error('Không tìm thấy sản phẩm');
   }
 });
 
-// Tạo đánh giá cho sản phẩm
+/**
+Tạo đánh giá cho sản phẩm
+POST /api/products/:id/reviews
+
+ */
 const createProductReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
   const product = await Product.findById(req.params.id);
@@ -171,11 +190,11 @@ const createProductReview = asyncHandler(async (req, res) => {
 
     if (alreadyReviewed) {
       res.status(400);
-      throw new Error("Bạn đã đánh giá sản phẩm này rồi");
+      throw new Error('Bạn đã đánh giá sản phẩm này rồi');
     }
 
     const review = {
-      name: req.user.firstName + " " + req.user.lastName,
+      name: req.user.firstName + ' ' + req.user.lastName,
       rating: Number(rating),
       comment,
       user: req.user._id,
@@ -188,10 +207,10 @@ const createProductReview = asyncHandler(async (req, res) => {
       product.reviews.length;
 
     await product.save();
-    res.status(201).json({ message: "Đánh giá đã được thêm" });
+    res.status(201).json({ message: 'Đánh giá đã được thêm' });
   } else {
     res.status(404);
-    throw new Error("Không tìm thấy sản phẩm");
+    throw new Error('Không tìm thấy sản phẩm');
   }
 });
 
