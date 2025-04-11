@@ -7,9 +7,9 @@ const Brand = require('../models/Brand');
  * @access  Private/Admin
  */
 const createBrand = asyncHandler(async (req, res) => {
-  const { name, description, logo, isActive } = req.body;
+  const { name, description, logo, website, country, featured } = req.body;
 
-  // Kiểm tra xem thương hiệu đã tồn tại chưa
+  // Kiểm tra xem thương hiệu đã tồn tại chưa (bao gồm cả đã xóa mềm)
   const brandExists = await Brand.findOne({ name });
 
   if (brandExists) {
@@ -17,11 +17,27 @@ const createBrand = asyncHandler(async (req, res) => {
     throw new Error('Thương hiệu đã tồn tại');
   }
 
+  // Tạo slug từ tên thương hiệu
+  const slug = Brand.createSlug(name);
+
+  // Kiểm tra xem slug đã tồn tại chưa (bao gồm cả đã xóa mềm)
+  const slugExists = await Brand.findOne({ slug });
+  if (slugExists) {
+    res.status(400);
+    throw new Error('Slug đã tồn tại, vui lòng chọn tên khác');
+  }
+
   const brand = await Brand.create({
     name,
     description,
+    slug,
     logo,
-    isActive
+    website,
+    country,
+    featured: featured || false,
+    isActive: true,
+    isDeleted: false,
+    deletedAt: null
   });
 
   if (brand) {
@@ -38,7 +54,44 @@ const createBrand = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getBrands = asyncHandler(async (req, res) => {
-  const brands = await Brand.find({});
+  const { showDeleted, sort, featured } = req.query;
+
+  // Xây dựng điều kiện tìm kiếm
+  const query = {};
+  
+  // Nếu không yêu cầu hiển thị thương hiệu đã xóa, chỉ lấy thương hiệu chưa xóa
+  if (!showDeleted) {
+    query.isDeleted = false;
+  }
+
+  // Lọc thương hiệu nổi bật nếu có yêu cầu
+  if (featured === 'true') {
+    query.featured = true;
+  }
+
+  // Sắp xếp
+  let sortOption = { name: 1 }; // Mặc định sắp xếp theo tên
+  if (sort) {
+    switch (sort) {
+      case 'name_asc':
+        sortOption = { name: 1 };
+        break;
+      case 'name_desc':
+        sortOption = { name: -1 };
+        break;
+      case 'newest':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'oldest':
+        sortOption = { createdAt: 1 };
+        break;
+      case 'featured':
+        sortOption = { featured: -1, name: 1 };
+        break;
+    }
+  }
+
+  const brands = await Brand.find(query).sort(sortOption);
   res.json(brands);
 });
 
@@ -48,7 +101,15 @@ const getBrands = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getBrandById = asyncHandler(async (req, res) => {
-  const brand = await Brand.findById(req.params.id);
+  const { showDeleted } = req.query;
+  const query = { _id: req.params.id };
+  
+  // Nếu không yêu cầu hiển thị thương hiệu đã xóa, chỉ lấy thương hiệu chưa xóa
+  if (!showDeleted) {
+    query.isDeleted = false;
+  }
+
+  const brand = await Brand.findOne(query);
 
   if (brand) {
     res.json(brand);
@@ -64,54 +125,86 @@ const getBrandById = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const updateBrand = asyncHandler(async (req, res) => {
-  const { name, description, logo, isActive } = req.body;
+  const { name, description, logo, website, country, featured, isActive } = req.body;
 
-  const brand = await Brand.findById(req.params.id);
+  // Tìm thương hiệu bao gồm cả đã xóa mềm
+  const brand = await Brand.findOne({ _id: req.params.id });
 
-  if (brand) {
-    // Kiểm tra xem tên mới có trùng với thương hiệu khác không
-    if (name !== brand.name) {
-      const brandExists = await Brand.findOne({ name });
-      if (brandExists) {
-        res.status(400);
-        throw new Error('Tên thương hiệu đã tồn tại');
-      }
-    }
-
-    brand.name = name || brand.name;
-    brand.description = description || brand.description;
-    brand.logo = logo || brand.logo;
-    brand.isActive = isActive !== undefined ? isActive : brand.isActive;
-
-    const updatedBrand = await brand.save();
-    res.json(updatedBrand);
-  } else {
+  if (!brand) {
     res.status(404);
     throw new Error('Không tìm thấy thương hiệu');
   }
+
+  // Nếu thương hiệu đã bị xóa mềm, không cho phép cập nhật
+  if (brand.isDeleted) {
+    res.status(400);
+    throw new Error('Không thể cập nhật thương hiệu đã bị xóa');
+  }
+
+  // Kiểm tra xem tên mới đã tồn tại chưa (nếu tên thay đổi)
+  if (name && name !== brand.name) {
+    const brandExists = await Brand.findOne({ 
+      name,
+      _id: { $ne: brand._id } // Loại trừ thương hiệu hiện tại
+    });
+    if (brandExists) {
+      res.status(400);
+      throw new Error('Tên thương hiệu đã tồn tại');
+    }
+    // Cập nhật slug khi tên thay đổi
+    brand.slug = Brand.createSlug(name);
+  }
+
+  brand.name = name || brand.name;
+  brand.description = description || brand.description;
+  brand.logo = logo || brand.logo;
+  brand.website = website || brand.website;
+  brand.country = country || brand.country;
+  brand.featured = featured !== undefined ? featured : brand.featured;
+  brand.isActive = isActive !== undefined ? isActive : brand.isActive;
+
+  const updatedBrand = await brand.save();
+  res.json(updatedBrand);
 });
 
 /**
- * @desc    Xóa thương hiệu
+ * @desc    Xóa mềm thương hiệu
  * @route   DELETE /api/brands/:id
  * @access  Private/Admin
  */
 const deleteBrand = asyncHandler(async (req, res) => {
-  const brand = await Brand.findById(req.params.id);
+  const brand = await Brand.findOne({ _id: req.params.id });
 
-  if (brand) {
-    await brand.deleteOne();
-    res.json({ message: 'Đã xóa thương hiệu' });
-  } else {
+  if (!brand) {
     res.status(404);
     throw new Error('Không tìm thấy thương hiệu');
   }
+
+  // Nếu thương hiệu đã bị xóa mềm
+  if (brand.isDeleted) {
+    res.status(400);
+    throw new Error('Thương hiệu đã bị xóa trước đó');
+  }
+
+  // Thực hiện xóa mềm
+  brand.isDeleted = true;
+  brand.deletedAt = new Date();
+  await brand.save();
+
+  res.json({ 
+    message: 'Thương hiệu đã được xóa thành công',
+    brand: {
+      _id: brand._id,
+      name: brand.name,
+      deletedAt: brand.deletedAt
+    }
+  });
 });
 
 module.exports = {
+  createBrand,
   getBrands,
   getBrandById,
-  createBrand,
   updateBrand,
-  deleteBrand,
+  deleteBrand
 };
