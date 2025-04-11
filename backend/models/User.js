@@ -44,6 +44,14 @@ const userSchema = mongoose.Schema(
     avatar: {
       type: String,
       default: ''
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
     }
   },
   {
@@ -61,6 +69,11 @@ userSchema.methods.isAdminUser = function() {
   return this.isAdmin;
 };
 
+// Phương thức kiểm tra tài khoản đã bị xóa mềm
+userSchema.methods.isDeletedUser = function() {
+  return this.isDeleted;
+};
+
 // Phương thức so sánh mật khẩu
 userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
@@ -76,6 +89,15 @@ userSchema.pre('save', async function(next) {
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
+});
+
+// Middleware để thêm điều kiện tìm kiếm không bao gồm các bản ghi đã xóa mềm
+userSchema.pre('find', function() {
+  this.where({ isDeleted: false });
+});
+
+userSchema.pre('findOne', function() {
+  this.where({ isDeleted: false });
 });
 
 const User = mongoose.model('User', userSchema);
