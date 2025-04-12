@@ -177,12 +177,29 @@ const updateUserProfile = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({});
+  // Kiểm tra quyền admin
+  if (!req.user.isAdmin) {
+    res.status(403);
+    throw new Error('Không có quyền thực hiện hành động này');
+  }
+
+  // Lấy tham số query
+  const { showDeleted } = req.query;
+  
+  // Xây dựng điều kiện tìm kiếm
+  const query = {};
+  
+  // Nếu không yêu cầu hiển thị người dùng đã xóa, chỉ lấy người dùng chưa xóa
+  if (!showDeleted) {
+    query.isDeleted = false;
+  }
+
+  const users = await User.find(query).select('-password');
   res.json(users);
 });
 
 /**
- * @desc    Xóa người dùng
+ * @desc    Xóa mềm người dùng
  * @route   DELETE /api/users/:id
  * @access  Private/Admin
  */
@@ -207,15 +224,18 @@ const deleteUser = asyncHandler(async (req, res) => {
     throw new Error('Không thể xóa tài khoản admin đang đăng nhập');
   }
 
-  // Tiến hành xóa user
-  await User.deleteOne({ _id: req.params.id });
+  // Thực hiện xóa mềm
+  user.isDeleted = true;
+  user.deletedAt = new Date();
+  await user.save();
 
   res.json({ 
     message: 'Người dùng đã được xóa thành công',
     user: {
       _id: user._id,
       username: user.username,
-      email: user.email
+      email: user.email,
+      deletedAt: user.deletedAt
     }
   });
 });
@@ -275,5 +295,5 @@ module.exports = {
   getUsers,
   deleteUser,
   getUserById,
-  updateUser,
+  updateUser
 };
