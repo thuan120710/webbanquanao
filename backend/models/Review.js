@@ -1,16 +1,16 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const reviewSchema = mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'User',
+      ref: "User",
     },
     product: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: 'Product',
+      ref: "Product",
     },
     rating: {
       type: Number,
@@ -33,10 +33,10 @@ const reviewSchema = mongoose.Schema(
 );
 
 // Phương thức kiểm tra xem đánh giá có hợp lệ không
-reviewSchema.methods.isValidRating = function() {
+reviewSchema.methods.isValidRating = function () {
   return this.rating >= 1 && this.rating <= 5;
 };
 
-const Review = mongoose.model('Review', reviewSchema);
+const Review = mongoose.model("Review", reviewSchema);
 
 module.exports = Review;

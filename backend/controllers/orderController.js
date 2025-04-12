@@ -1,6 +1,7 @@
-const asyncHandler = require('express-async-handler');
-const Order = require('../models/Order');
-const Product = require('../models/Product');
+const asyncHandler = require("express-async-handler");
+const Order = require("../models/Order");
+const Product = require("../models/Product");
+const Cart = require("../models/Cart");
 
 /**
  * @desc    Tạo đơn hàng mới
@@ -19,8 +20,14 @@ const createOrder = asyncHandler(async (req, res) => {
 
   if (orderItems && orderItems.length === 0) {
     res.status(400);
-    throw new Error('Không có sản phẩm nào trong đơn hàng');
+    throw new Error("Không có sản phẩm nào trong đơn hàng");
   } else {
+    // Log product IDs
+    console.log(
+      "Product IDs in order:",
+      orderItems.map((item) => item.product)
+    );
+
     // Kiểm tra số lượng sản phẩm trong kho
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
@@ -30,8 +37,11 @@ const createOrder = asyncHandler(async (req, res) => {
       }
       if (product.countInStock < item.quantity) {
         res.status(400);
-        throw new Error(`Sản phẩm ${product.name} chỉ còn ${product.countInStock} trong kho`);
+        throw new Error(
+          `Sản phẩm ${product.name} chỉ còn ${product.countInStock} trong kho`
+        );
       }
+      console.log("Checking product:", item.product);
     }
 
     // Tạo đơn hàng mới
@@ -47,7 +57,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
     // Lưu đơn hàng và cập nhật số lượng sản phẩm trong kho
     const createdOrder = await order.save();
-    
+
     // Giảm số lượng sản phẩm trong kho
     for (const item of orderItems) {
       const product = await Product.findById(item.product);
@@ -66,20 +76,23 @@ const createOrder = asyncHandler(async (req, res) => {
  */
 const getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate(
-    'user',
-    'firstName lastName email'
+    "user",
+    "firstName lastName email"
   );
 
   if (order) {
     // Kiểm tra quyền truy cập (chỉ admin hoặc chủ đơn hàng mới được xem)
-    if (!req.user.isAdmin && order.user._id.toString() !== req.user._id.toString()) {
+    if (
+      !req.user.isAdmin &&
+      order.user._id.toString() !== req.user._id.toString()
+    ) {
       res.status(403);
-      throw new Error('Bạn không có quyền xem đơn hàng này');
+      throw new Error("Bạn không có quyền xem đơn hàng này");
     }
     res.json(order);
   } else {
     res.status(404);
-    throw new Error('Không tìm thấy đơn hàng');
+    throw new Error("Không tìm thấy đơn hàng");
   }
 });
 
@@ -106,7 +119,7 @@ const updateOrderToPaid = asyncHandler(async (req, res) => {
     res.json(updatedOrder);
   } else {
     res.status(404);
-    throw new Error('Không tìm thấy đơn hàng');
+    throw new Error("Không tìm thấy đơn hàng");
   }
 });
 
@@ -127,7 +140,7 @@ const updateOrderToDelivered = asyncHandler(async (req, res) => {
     res.json(updatedOrder);
   } else {
     res.status(404);
-    throw new Error('Không tìm thấy đơn hàng');
+    throw new Error("Không tìm thấy đơn hàng");
   }
 });
 
@@ -147,7 +160,7 @@ const getMyOrders = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const getOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({}).populate('user', 'id firstName lastName');
+  const orders = await Order.find({}).populate("user", "id firstName lastName");
   res.json(orders);
 });
 
@@ -161,19 +174,19 @@ const cancelOrder = asyncHandler(async (req, res) => {
 
   if (!order) {
     res.status(404);
-    throw new Error('Không tìm thấy đơn hàng');
+    throw new Error("Không tìm thấy đơn hàng");
   }
 
   // Kiểm tra quyền hủy đơn hàng
   if (!req.user.isAdmin && order.user.toString() !== req.user._id.toString()) {
     res.status(403);
-    throw new Error('Bạn không có quyền hủy đơn hàng này');
+    throw new Error("Bạn không có quyền hủy đơn hàng này");
   }
 
   // Chỉ cho phép hủy đơn hàng chưa thanh toán và chưa giao hàng
   if (order.isPaid || order.isDelivered) {
     res.status(400);
-    throw new Error('Không thể hủy đơn hàng đã thanh toán hoặc đã giao hàng');
+    throw new Error("Không thể hủy đơn hàng đã thanh toán hoặc đã giao hàng");
   }
 
   // Hoàn trả số lượng sản phẩm vào kho
@@ -188,7 +201,67 @@ const cancelOrder = asyncHandler(async (req, res) => {
   // Xóa đơn hàng
   await order.remove();
 
-  res.json({ message: 'Đơn hàng đã được hủy' });
+  res.json({ message: "Đơn hàng đã được hủy" });
+});
+
+/**
+ * @desc    Cập nhật trạng thái đơn hàng
+ * @route   PUT /api/orders/:id/status
+ * @access  Private/Admin
+ */
+const updateOrderStatus = asyncHandler(async (req, res) => {
+  const order = await Order.findById(req.params.id);
+
+  if (order) {
+    order.status = req.body.status || order.status;
+    const updatedOrder = await order.save();
+    res.json(updatedOrder);
+  } else {
+    res.status(404);
+    throw new Error("Không tìm thấy đơn hàng");
+  }
+});
+
+/**
+ * @desc    Xóa sản phẩm khỏi giỏ hàng
+ * @route   DELETE /api/carts/:itemId
+ * @access  Private
+ */
+const removeFromCart = asyncHandler(async (req, res) => {
+  const itemId = req.params.itemId;
+
+  try {
+    const cart = await Cart.findOne({ user: req.user._id });
+
+    if (!cart) {
+      res.status(404);
+      throw new Error("Cart not found");
+    }
+
+    const cartItem = cart.items.id(itemId);
+
+    if (!cartItem) {
+      res.status(404);
+      throw new Error("Item not found in cart");
+    }
+
+    console.log("Attempting to remove item:", itemId);
+    console.log("Cart before removal:", cart);
+
+    // Use pull to remove the item
+    cart.items.pull(itemId);
+    await cart.save();
+
+    const updatedCart = await Cart.findById(cart._id).populate(
+      "items.product",
+      "name price image countInStock"
+    );
+
+    res.json(updatedCart);
+  } catch (error) {
+    console.error("Error removing item from cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 });
 
 module.exports = {
@@ -199,4 +272,6 @@ module.exports = {
   getMyOrders,
   getOrders,
   cancelOrder,
+  updateOrderStatus,
+  removeFromCart,
 };

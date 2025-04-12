@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Container,
   Typography,
@@ -20,13 +20,49 @@ import {
 } from "@mui/icons-material";
 import { useCart } from "../../context/CartContext";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity } = useCart();
+  const { cart, setCart, removeFromCart, updateQuantity } = useCart();
   const navigate = useNavigate();
 
-  const handleRemoveFromCart = (productId) => {
-    removeFromCart(productId);
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        const config = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
+
+        const { data } = await axios.get(
+          "http://localhost:5000/api/cart",
+          config
+        );
+        setCart(data.items); // Ensure this matches the structure of your API response
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+      }
+    };
+
+    fetchCart();
+  }, [setCart]);
+
+  const handleRemoveFromCart = async (productId) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      await axios.delete(`http://localhost:5000/api/cart/${productId}`, config);
+      setCart(cart.filter((item) => item._id !== productId)); // Update local state
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+    }
   };
 
   const handleUpdateQuantity = (productId, newQuantity) => {
@@ -41,13 +77,20 @@ const Cart = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 8 }}>
-      <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
+      <Typography
+        variant="h4"
+        component="h1"
+        gutterBottom
+        sx={{ fontWeight: 600 }}
+      >
         Giỏ Hàng
       </Typography>
 
       {cart.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: "center", mt: 4 }}>
-          <ShoppingCartIcon sx={{ fontSize: 60, color: "text.secondary", mb: 2 }} />
+          <ShoppingCartIcon
+            sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+          />
           <Typography variant="h6" sx={{ color: "text.secondary", mb: 2 }}>
             Giỏ hàng của bạn hiện tại trống
           </Typography>
@@ -68,30 +111,31 @@ const Cart = () => {
                 <Box key={product._id} sx={{ mb: 2 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} sm={3}>
-                      <Box 
-                        sx={{ 
-                          height: 120, 
-                          width: '100%', 
-                          bgcolor: '#f5f5f5',
+                      <Box
+                        sx={{
+                          height: 120,
+                          width: "100%",
+                          bgcolor: "#f5f5f5",
                           borderRadius: 1,
-                          display: 'flex',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          overflow: 'hidden',
-                          p: 1
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          overflow: "hidden",
+                          p: 1,
                         }}
                       >
                         <img
                           src={product.image}
                           alt={product.name}
                           style={{
-                            maxWidth: '100%',
-                            maxHeight: '100%',
-                            objectFit: 'contain'
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                            objectFit: "contain",
                           }}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/120x120?text=No+Image';
+                            e.target.src =
+                              "https://via.placeholder.com/120x120?text=No+Image";
                           }}
                         />
                       </Box>
@@ -100,28 +144,54 @@ const Cart = () => {
                       <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
                         {product.name}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 1 }}
+                      >
                         {product.description?.substring(0, 100)}
-                        {product.description?.length > 100 ? '...' : ''}
+                        {product.description?.length > 100 ? "..." : ""}
                       </Typography>
-                      <Typography variant="body1" sx={{ fontWeight: "bold", color: "primary.main" }}>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontWeight: "bold", color: "primary.main" }}
+                      >
                         {product.price?.toLocaleString("vi-VN")}đ
                       </Typography>
                     </Grid>
                     <Grid item xs={12} sm={4}>
-                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", mb: 1 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          mb: 1,
+                        }}
+                      >
                         <IconButton
                           size="small"
-                          onClick={() => handleUpdateQuantity(product._id, product.quantity - 1)}
+                          onClick={() =>
+                            handleUpdateQuantity(
+                              product._id,
+                              product.quantity - 1
+                            )
+                          }
                         >
                           <RemoveIcon />
                         </IconButton>
-                        <Typography sx={{ mx: 2, minWidth: "40px", textAlign: "center" }}>
+                        <Typography
+                          sx={{ mx: 2, minWidth: "40px", textAlign: "center" }}
+                        >
                           {product.quantity}
                         </Typography>
                         <IconButton
                           size="small"
-                          onClick={() => handleUpdateQuantity(product._id, product.quantity + 1)}
+                          onClick={() =>
+                            handleUpdateQuantity(
+                              product._id,
+                              product.quantity + 1
+                            )
+                          }
                         >
                           <AddIcon />
                         </IconButton>
@@ -163,7 +233,11 @@ const Cart = () => {
                 <Divider sx={{ my: 2 }} />
                 <Grid container justifyContent="space-between">
                   <Typography variant="h6">Tổng cộng:</Typography>
-                  <Typography variant="h6" color="primary.main" sx={{ fontWeight: 600 }}>
+                  <Typography
+                    variant="h6"
+                    color="primary.main"
+                    sx={{ fontWeight: 600 }}
+                  >
                     {calculateTotal().toLocaleString("vi-VN")}đ
                   </Typography>
                 </Grid>
