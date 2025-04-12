@@ -18,54 +18,67 @@ const createOrder = asyncHandler(async (req, res) => {
     totalPrice,
   } = req.body;
 
-  if (orderItems && orderItems.length === 0) {
+  if (!orderItems || orderItems.length === 0) {
     res.status(400);
     throw new Error("Không có sản phẩm nào trong đơn hàng");
-  } else {
-    // Log product IDs
-    console.log(
-      "Product IDs in order:",
-      orderItems.map((item) => item.product)
-    );
+  }
 
-    // Kiểm tra số lượng sản phẩm trong kho
-    for (const item of orderItems) {
-      const product = await Product.findById(item.product);
-      if (!product) {
-        res.status(404);
-        throw new Error(`Không tìm thấy sản phẩm: ${item.name}`);
-      }
-      if (product.countInStock < item.quantity) {
-        res.status(400);
-        throw new Error(
-          `Sản phẩm ${product.name} chỉ còn ${product.countInStock} trong kho`
-        );
-      }
-      console.log("Checking product:", item.product);
+  // Kiểm tra và xác thực từng sản phẩm
+  const validatedItems = [];
+  for (const item of orderItems) {
+    const product = await Product.findById(item.product);
+    if (!product) {
+      res.status(404);
+      throw new Error(`Không tìm thấy sản phẩm với ID: ${item.product}`);
     }
 
-    // Tạo đơn hàng mới
-    const order = new Order({
-      orderItems,
-      user: req.user._id,
-      shippingAddress,
-      paymentMethod,
-      taxPrice,
-      shippingPrice,
-      totalPrice,
-    });
+    if (product.countInStock < item.quantity) {
+      res.status(400);
+      throw new Error(
+        `Sản phẩm ${product.name} chỉ còn ${product.countInStock} trong kho`
+      );
+    }
 
-    // Lưu đơn hàng và cập nhật số lượng sản phẩm trong kho
+    validatedItems.push({
+      ...item,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+    });
+  }
+
+  // Tạo đơn hàng mới với thông tin sản phẩm đã xác thực
+  const order = new Order({
+    orderItems: validatedItems,
+    user: req.user._id,
+    shippingAddress,
+    paymentMethod,
+    taxPrice,
+    shippingPrice,
+    totalPrice,
+  });
+
+  try {
+    // Lưu đơn hàng
     const createdOrder = await order.save();
 
-    // Giảm số lượng sản phẩm trong kho
-    for (const item of orderItems) {
-      const product = await Product.findById(item.product);
-      product.countInStock -= item.quantity;
-      await product.save();
+    // Cập nhật số lượng trong kho
+    for (const item of validatedItems) {
+      await Product.findByIdAndUpdate(item.product, {
+        $inc: { countInStock: -item.quantity }
+      });
     }
 
+    // Xóa giỏ hàng sau khi đặt hàng thành công
+    await Cart.findOneAndUpdate(
+      { user: req.user._id },
+      { $set: { items: [] } }
+    );
+
     res.status(201).json(createdOrder);
+  } catch (error) {
+    res.status(500);
+    throw new Error("Lỗi khi tạo đơn hàng: " + error.message);
   }
 });
 

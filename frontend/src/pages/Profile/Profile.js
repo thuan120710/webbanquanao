@@ -25,7 +25,8 @@ import {
   Email as EmailIcon,
   Edit as EditIcon,
   Phone as PhoneIcon,
-  LocationOn as LocationIcon
+  LocationOn as LocationIcon,
+  ShoppingBag as ShoppingBagIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -134,6 +135,10 @@ const Profile = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
+  const handleViewOrders = () => {
+    navigate('/profile/orders');
+  };
+
   if (loading) {
     return (
       <Container>
@@ -235,6 +240,17 @@ const Profile = () => {
                 <ListItemText
                   primary="Địa chỉ"
                   secondary={userInfo?.address || 'Chưa cập nhật'}
+                />
+              </ListItem>
+              <Divider variant="inset" component="li" />
+
+              <ListItem button onClick={handleViewOrders}>
+                <ListItemIcon>
+                  <ShoppingBagIcon color="primary" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Đơn hàng của tôi"
+                  secondary="Xem lịch sử đơn hàng"
                 />
               </ListItem>
             </List>

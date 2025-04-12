@@ -23,51 +23,40 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Cart = () => {
-  const { cart, setCart, removeFromCart, updateQuantity } = useCart();
+  const { cart, removeFromCart, updateQuantity } = useCart();
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchCart = async () => {
       try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-        const config = {
-          headers: {
-            Authorization: `Bearer ${userInfo.token}`,
-          },
-        };
-
-        const { data } = await axios.get(
-          "http://localhost:5000/api/cart",
-          config
-        );
-        setCart(data.items); // Ensure this matches the structure of your API response
+        if (!userInfo) {
+          navigate('/login');
+          return;
+        }
       } catch (error) {
         console.error("Error fetching cart:", error);
       }
     };
 
     fetchCart();
-  }, [setCart]);
+  }, [navigate]);
 
   const handleRemoveFromCart = async (productId) => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: {
-          Authorization: `Bearer ${userInfo.token}`,
-        },
-      };
-
-      await axios.delete(`http://localhost:5000/api/cart/${productId}`, config);
-      setCart(cart.filter((item) => item._id !== productId)); // Update local state
+      await removeFromCart(productId);
     } catch (error) {
       console.error("Error removing from cart:", error);
     }
   };
 
-  const handleUpdateQuantity = (productId, newQuantity) => {
+  const handleUpdateQuantity = async (product, newQuantity) => {
     if (newQuantity >= 1) {
-      updateQuantity(productId, newQuantity);
+      try {
+        await updateQuantity(product._id, newQuantity);
+      } catch (error) {
+        console.error("Error updating quantity:", error);
+      }
     }
   };
 
@@ -172,10 +161,11 @@ const Cart = () => {
                           size="small"
                           onClick={() =>
                             handleUpdateQuantity(
-                              product._id,
+                              product,
                               product.quantity - 1
                             )
                           }
+                          disabled={product.quantity <= 1}
                         >
                           <RemoveIcon />
                         </IconButton>
@@ -188,10 +178,11 @@ const Cart = () => {
                           size="small"
                           onClick={() =>
                             handleUpdateQuantity(
-                              product._id,
+                              product,
                               product.quantity + 1
                             )
                           }
+                          disabled={product.quantity >= (product.countInStock || 99)}
                         >
                           <AddIcon />
                         </IconButton>
