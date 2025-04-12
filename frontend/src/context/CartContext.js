@@ -37,7 +37,7 @@ const cartReducer = (state, action) => {
         return {
           ...state,
           items: state.items.map((item) =>
-            item._id === action.payload.id
+            item._id === action.payload.productId
               ? { ...item, quantity: action.payload.quantity }
               : item
           ),
@@ -52,7 +52,7 @@ const cartReducer = (state, action) => {
       case "LOAD_CART":
         return {
           ...state,
-          items: action.payload,
+          items: action.payload || [],
         };
 
       default:
@@ -75,52 +75,21 @@ const API_BASE_URL = "http://localhost:5000";
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
 
-  // Load cart from localStorage and verify products with database
   useEffect(() => {
     const loadCart = async () => {
       try {
         const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        if (!userInfo) return;
 
-        if (userInfo) {
-          // Load từ database khi đã login
-          const config = {
-            headers: {
-              Authorization: `Bearer ${userInfo.token}`,
-            },
-          };
+        const config = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
 
-          const { data } = await axios.get(`${API_BASE_URL}/api/cart`, config);
+        const { data } = await axios.get(`${API_BASE_URL}/api/cart`, config);
+        if (data && data.items) {
           dispatch({ type: "LOAD_CART", payload: data.items });
-        } else {
-          // Load từ localStorage khi chưa login
-          const savedCart = localStorage.getItem("cart");
-
-          if (savedCart) {
-            const parsedCart = JSON.parse(savedCart);
-            const verifiedCart = [];
-
-            for (const item of parsedCart) {
-              try {
-                const { data } = await axios.get(
-                  `${API_BASE_URL}/api/products/${item._id}`
-                );
-
-                if (data) {
-                  verifiedCart.push({
-                    ...data,
-                    quantity: item.quantity,
-                  });
-                }
-              } catch (err) {
-                console.error(
-                  `Product with ID ${item._id} not found in database`
-                );
-                continue;
-              }
-            }
-
-            dispatch({ type: "LOAD_CART", payload: verifiedCart });
-          }
         }
       } catch (error) {
         console.error("Error loading cart:", error);
@@ -188,41 +157,44 @@ export const CartProvider = ({ children }) => {
 
   const updateQuantity = async (productId, quantity) => {
     try {
+      if (!productId) {
+        throw new Error("Product ID is required");
+      }
+
       if (quantity < 1) {
         toast.error("Số lượng phải > 0", { autoClose: 2000 });
         return;
       }
 
-      // Verify product still exists before updating quantity
-      const { data } = await axios.get(
-        `${API_BASE_URL}/api/products/${productId}`
-      );
-
-      if (!data) {
-        throw new Error("Sản phẩm không tồn tại trong cơ sở dữ liệu");
-      }
-
-      // Verify there's enough stock
-      if (data.countInStock < quantity) {
-        toast.error(`Chỉ còn ${data.countInStock} sản phẩm`, {
-          autoClose: 2000,
-        });
-        // Set to maximum available quantity
-        dispatch({
-          type: "UPDATE_QUANTITY",
-          payload: { id: productId, quantity: data.countInStock },
-        });
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo) {
+        toast.error("Vui lòng đăng nhập", { autoClose: 2000 });
         return;
       }
 
-      dispatch({
-        type: "UPDATE_QUANTITY",
-        payload: { id: productId, quantity },
-      });
-      toast.success("Đã cập nhật số lượng", toastOptions);
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+          "Content-Type": "application/json",
+        },
+      };
+
+      const { data } = await axios.put(
+        `${API_BASE_URL}/api/cart/${productId}`,
+        { quantity },
+        config
+      );
+
+      if (data && data.items) {
+        dispatch({ type: "LOAD_CART", payload: data.items });
+        toast.success("Đã cập nhật số lượng", toastOptions);
+      }
     } catch (error) {
       console.error("Error updating quantity:", error);
-      toast.error("Không thể cập nhật", { autoClose: 2000 });
+      toast.error(
+        error.response?.data?.message || "Không thể cập nhật số lượng",
+        { autoClose: 2000 }
+      );
     }
   };
 

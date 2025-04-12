@@ -17,7 +17,9 @@ import ProductList from "./pages/Product/ProductList";
 import ProductDetail from "./pages/Product/ProductDetail";
 import Cart from "./pages/Cart/Cart";
 import Checkout from "./pages/Checkout/Checkout";
-import OrderSuccess from "./pages/OrderSuccess/OrderSuccess";
+import OrderSuccess from "./pages/Order/OrderSuccess";
+import OrderList from "./pages/Order/OrderList";
+import OrderDetail from "./pages/Order/OrderDetail";
 import Profile from "./pages/Profile/Profile";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
@@ -32,7 +34,7 @@ import OrderManagement from "./pages/admin/OrderManagement";
 import BrandManagement from "./pages/admin/BrandManagement";
 import CouponManagement from "./pages/admin/CouponManagement";
 import GoogleAuthCallback from "./pages/Auth/GoogleAuthCallback";
-import OrderDetail from "./pages/admin/OrderDetail";
+import AdminOrderDetail from "./pages/admin/OrderDetail";
 
 function App() {
   return (
@@ -111,6 +113,22 @@ function App() {
                       </PrivateRoute>
                     }
                   />
+                  <Route
+                    path="/profile/orders"
+                    element={
+                      <PrivateRoute>
+                        <OrderList />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/orders/:id"
+                    element={
+                      <PrivateRoute>
+                        <OrderDetail />
+                      </PrivateRoute>
+                    }
+                  />
 
                   {/* Admin Routes */}
                   <Route
@@ -157,7 +175,7 @@ function App() {
                     path="/admin/orders"
                     element={
                       <AdminRoute>
-                        <OrderManagement />
+                        <OrderList />
                       </AdminRoute>
                     }
                   />
@@ -173,7 +191,7 @@ function App() {
                     path="/admin/orders/:id"
                     element={
                       <AdminRoute>
-                        <OrderDetail />
+                        <AdminOrderDetail />
                       </AdminRoute>
                     }
                   />

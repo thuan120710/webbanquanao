@@ -76,20 +76,18 @@ const Checkout = () => {
     try {
       const orderData = {
         orderItems: cart.map((item) => ({
-          product: item._id,
-          name: item.name,
-          image:
-            item.images && item.images.length > 0
-              ? item.images[0]
-              : "default-image.jpg",
-          price: item.price,
+          product: item.product?._id || item._id,
           quantity: item.quantity,
         })),
         shippingAddress: {
+          fullName: shippingInfo.fullName,
+          phoneNumber: shippingInfo.phoneNumber,
           address: shippingInfo.address,
           city: shippingInfo.city,
-          postalCode: shippingInfo.district,
+          district: shippingInfo.district,
+          notes: shippingInfo.notes,
           country: "Vietnam",
+          postalCode: shippingInfo.district
         },
         paymentMethod: paymentMethod,
         taxPrice: calculateTax(),
@@ -105,6 +103,8 @@ const Checkout = () => {
         },
       };
 
+      console.log("Sending order data:", orderData);
+
       const response = await axios.post(
         `${API_BASE_URL}/api/orders`,
         orderData,
@@ -114,7 +114,7 @@ const Checkout = () => {
 
       clearCart();
       toast.success("Đặt hàng thành công!");
-      navigate("/order-success");
+      navigate(`/order-success?orderId=${response.data._id}`);
     } catch (error) {
       console.error("Error placing order:", error);
       setError(

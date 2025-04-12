@@ -6,6 +6,8 @@ const Product = require("../models/Product");
  * GET /api/products
  */
 const getProducts = asyncHandler(async (req, res) => {
+  const pageSize = 12; // Số sản phẩm trên mỗi trang
+  const page = Number(req.query.pageNumber) || 1;
   const { showDeleted, keyword, category, brand, minPrice, maxPrice, sort } = req.query;
 
   // Xây dựng điều kiện tìm kiếm
@@ -62,12 +64,20 @@ const getProducts = asyncHandler(async (req, res) => {
     }
   }
 
+  const count = await Product.countDocuments(query);
   const products = await Product.find(query)
     .populate('category', 'name')
     .populate('brand', 'name')
-    .sort(sortOption);
+    .sort(sortOption)
+    .limit(pageSize)
+    .skip(pageSize * (page - 1));
 
-  res.json(products);
+  res.json({
+    products,
+    page,
+    pages: Math.ceil(count / pageSize),
+    totalProducts: count,
+  });
 });
 
 /**
