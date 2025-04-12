@@ -24,9 +24,9 @@ import {
   ArrowBack as ArrowBackIcon,
 } from "@mui/icons-material";
 import axios from "axios";
-import ReviewList from '../../components/ReviewList';
-import ReviewForm from '../../components/ReviewForm';
-import { motion } from 'framer-motion';
+import ReviewList from "../../components/ReviewList";
+import ReviewForm from "../../components/ReviewForm";
+import { motion } from "framer-motion";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -42,8 +42,10 @@ const ProductDetail = () => {
   useEffect(() => {
     const fetchProductDetails = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/products/${id}`);
-        console.log('Product details:', data);
+        const { data } = await axios.get(
+          `http://localhost:5000/api/products/${id}`
+        );
+        console.log("Product details:", data);
         setProduct(data);
         setError(null);
       } catch (error) {
@@ -59,14 +61,14 @@ const ProductDetail = () => {
   }, [id]);
 
   const getBrandName = (brand) => {
-    if (!brand) return 'Không có';
-    if (typeof brand === 'object' && brand.name) return brand.name;
+    if (!brand) return "Không có";
+    if (typeof brand === "object" && brand.name) return brand.name;
     return brand;
   };
 
   const getCategoryName = (category) => {
-    if (!category) return 'Không có';
-    if (typeof category === 'object' && category.name) return category.name;
+    if (!category) return "Không có";
+    if (typeof category === "object" && category.name) return category.name;
     return category;
   };
 
@@ -82,7 +84,7 @@ const ProductDetail = () => {
         ...product,
         quantity,
       });
-      navigate('/cart');
+      navigate("/cart");
     }
   };
 
@@ -100,7 +102,7 @@ const ProductDetail = () => {
     visible: {
       opacity: 1,
       transition: {
-        when: 'beforeChildren',
+        when: "beforeChildren",
         staggerChildren: 0.1,
       },
     },
@@ -111,17 +113,17 @@ const ProductDetail = () => {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { type: 'spring', stiffness: 50 },
+      transition: { type: "spring", stiffness: 50 },
     },
   };
 
   const formatPrice = (price) => {
-    return price ? price.toLocaleString('vi-VN') + 'đ' : '';
+    return price ? price.toLocaleString("vi-VN") + "đ" : "";
   };
 
   return (
-    <Container 
-      maxWidth="lg" 
+    <Container
+      maxWidth="lg"
       sx={{ mt: 4, mb: 8 }}
       component={motion.div}
       variants={containerVariants}
@@ -139,24 +141,30 @@ const ProductDetail = () => {
       </Button>
 
       <Grid container spacing={4}>
-        <Grid item xs={12} md={6} component={motion.div} variants={itemVariants}>
-          <Paper 
-            elevation={0} 
-            sx={{ 
-              borderRadius: 2, 
-              overflow: 'hidden',
-              border: '1px solid #eee' 
+        <Grid
+          item
+          xs={12}
+          md={6}
+          component={motion.div}
+          variants={itemVariants}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "1px solid #eee",
             }}
           >
             <img
               src={product?.image}
               alt={product?.name}
               style={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '500px',
-                objectFit: 'contain',
-                p: 2
+                width: "100%",
+                height: "auto",
+                maxHeight: "500px",
+                objectFit: "contain",
+                p: 2,
               }}
               onError={(e) => {
                 e.target.onerror = null;
@@ -172,8 +180,12 @@ const ProductDetail = () => {
               {product?.name}
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h5" color="primary" sx={{ fontWeight: 'bold', mr: 1 }}>
+            <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+              <Typography
+                variant="h5"
+                color="primary"
+                sx={{ fontWeight: "bold", mr: 1 }}
+              >
                 {formatPrice(product?.price)}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -188,30 +200,37 @@ const ProductDetail = () => {
             </Typography>
 
             <Box sx={{ mt: 3, mb: 3 }}>
-              <Chip 
-                label={product?.countInStock > 0 ? 'Còn hàng' : 'Hết hàng'} 
-                color={product?.countInStock > 0 ? 'success' : 'error'}
+              <Chip
+                label={product?.countInStock > 0 ? "Còn hàng" : "Hết hàng"}
+                color={product?.countInStock > 0 ? "success" : "error"}
                 sx={{ mr: 1 }}
               />
-              <Chip 
+              <Chip
                 label={`Thương hiệu: ${getBrandName(product?.brand)}`}
-                variant="outlined" 
+                variant="outlined"
                 sx={{ mr: 1 }}
               />
-              <Chip 
+              <Chip
                 label={`Danh mục: ${getCategoryName(product?.category)}`}
                 variant="outlined"
               />
             </Box>
 
             {product?.countInStock > 0 && (
-              <Box sx={{ mb: 3, display: 'flex', alignItems: 'center' }}>
+              <Box sx={{ mb: 3, display: "flex", alignItems: "center" }}>
                 <Typography variant="body1" sx={{ mr: 2 }}>
                   Số lượng:
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #ddd', borderRadius: 1 }}>
-                  <IconButton 
-                    size="small" 
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    border: "1px solid #ddd",
+                    borderRadius: 1,
+                  }}
+                >
+                  <IconButton
+                    size="small"
                     onClick={() => handleQuantityChange(quantity - 1)}
                     disabled={quantity <= 1}
                   >
@@ -224,18 +243,18 @@ const ProductDetail = () => {
                       if (!isNaN(val)) handleQuantityChange(val);
                     }}
                     InputProps={{
-                      inputProps: { 
-                        min: 1, 
+                      inputProps: {
+                        min: 1,
                         max: product?.countInStock,
-                        style: { textAlign: 'center', width: '40px' } 
+                        style: { textAlign: "center", width: "40px" },
                       },
-                      disableUnderline: true
+                      disableUnderline: true,
                     }}
                     variant="standard"
                     sx={{ mx: 1 }}
                   />
-                  <IconButton 
-                    size="small" 
+                  <IconButton
+                    size="small"
                     onClick={() => handleQuantityChange(quantity + 1)}
                     disabled={quantity >= product?.countInStock}
                   >
@@ -258,7 +277,7 @@ const ProductDetail = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                {product?.countInStock === 0 ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+                {product?.countInStock === 0 ? "Hết hàng" : "Thêm vào giỏ hàng"}
               </Button>
             </Box>
           </Box>
@@ -266,10 +285,10 @@ const ProductDetail = () => {
       </Grid>
 
       <Box sx={{ mt: 6 }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-          <Tabs 
-            value={activeTab} 
-            onChange={handleTabChange} 
+        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
             aria-label="product tabs"
             component={motion.div}
             variants={itemVariants}
@@ -287,15 +306,19 @@ const ProductDetail = () => {
               animate="visible"
             >
               <Paper sx={{ p: 3, borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom>Thông tin chi tiết</Typography>
-                <Typography variant="body1" paragraph>
-                  {product?.description || 'Không có thông tin chi tiết.'}
+                <Typography variant="h6" gutterBottom>
+                  Thông tin chi tiết
                 </Typography>
-                
+                <Typography variant="body1" paragraph>
+                  {product?.description || "Không có thông tin chi tiết."}
+                </Typography>
+
                 {/* Hiển thị thêm thông tin khác nếu có */}
                 {product?.specifications && (
                   <Box sx={{ mt: 2 }}>
-                    <Typography variant="h6" gutterBottom>Thông số kỹ thuật</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Thông số kỹ thuật
+                    </Typography>
                     <pre>{product.specifications}</pre>
                   </Box>
                 )}
@@ -311,8 +334,14 @@ const ProductDetail = () => {
               initial="hidden"
               animate="visible"
             >
-              <ReviewForm productId={id} onReviewSubmitted={handleReviewSubmitted} />
-              <ReviewList productId={id} key={refreshReviews ? 'refresh' : 'initial'} />
+              <ReviewForm
+                productId={id}
+                onReviewSubmitted={handleReviewSubmitted}
+              />
+              <ReviewList
+                productId={id}
+                key={refreshReviews ? "refresh" : "initial"}
+              />
             </motion.div>
           )}
         </Box>
