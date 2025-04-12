@@ -48,6 +48,14 @@ const productSchema = mongoose.Schema(
       required: true,
       default: 0,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false
+    },
+    deletedAt: {
+      type: Date,
+      default: null
+    }
   },
   {
     timestamps: true,
@@ -59,6 +67,11 @@ productSchema.methods.isInStock = function() {
   return this.countInStock > 0;
 };
 
+// Phương thức kiểm tra sản phẩm đã bị xóa mềm
+productSchema.methods.isDeletedProduct = function() {
+  return this.isDeleted;
+};
+
 // Phương thức giảm số lượng khi đặt hàng
 productSchema.methods.decreaseStock = function(quantity) {
   if (this.countInStock >= quantity) {
@@ -67,6 +80,15 @@ productSchema.methods.decreaseStock = function(quantity) {
   }
   return false;
 };
+
+// Middleware để thêm điều kiện tìm kiếm không bao gồm các sản phẩm đã xóa mềm
+productSchema.pre('find', function() {
+  this.where({ isDeleted: false });
+});
+
+productSchema.pre('findOne', function() {
+  this.where({ isDeleted: false });
+});
 
 const Product = mongoose.model('Product', productSchema);
 
