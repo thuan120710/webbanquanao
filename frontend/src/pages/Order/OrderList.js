@@ -64,10 +64,16 @@ const OrderList = () => {
         }
       };
 
-      // Fetch orders based on current view
       const endpoint = isAdminView ? '/api/orders' : '/api/orders/myorders';
       const { data } = await axios.get(`${API_BASE_URL}${endpoint}`, config);
-      setOrders(data);
+      
+      // Đảm bảo mỗi đơn hàng có trạng thái và sử dụng trạng thái từ server
+      const ordersWithStatus = data.map(order => ({
+        ...order,
+        status: order.status // Chỉ sử dụng trạng thái từ server, không set default
+      }));
+      
+      setOrders(ordersWithStatus);
       setLoading(false);
     } catch (error) {
       setError(error.response?.data?.message || 'Không thể tải danh sách đơn hàng');
@@ -77,12 +83,13 @@ const OrderList = () => {
 
   const handleEditClick = (orderId, currentStatus) => {
     setEditingId(orderId);
-    setTempStatus({ ...tempStatus, [orderId]: currentStatus });
+    setTempStatus({ ...tempStatus, [orderId]: currentStatus || 'pending' });
   };
 
   const handleCancelEdit = (orderId) => {
     setEditingId(null);
-    setTempStatus({ ...tempStatus, [orderId]: orders.find(o => o._id === orderId)?.status });
+    const currentOrder = orders.find(o => o._id === orderId);
+    setTempStatus({ ...tempStatus, [orderId]: currentOrder?.status || 'pending' });
   };
 
   const handleStatusChange = async (orderId) => {
@@ -96,20 +103,46 @@ const OrderList = () => {
         }
       };
 
-      await axios.put(
+      const newStatus = tempStatus[orderId];
+      
+      const response = await axios.put(
         `${API_BASE_URL}/api/orders/${orderId}/status`,
-        { status: tempStatus[orderId] },
+        { status: newStatus },
         config
       );
 
-      setOrders(orders.map(order => 
-        order._id === orderId ? { ...order, status: tempStatus[orderId] } : order
-      ));
+      if (!response.data || response.data.error) {
+        throw new Error(response.data?.message || 'Không thể cập nhật trạng thái');
+      }
+
+      // Cập nhật state với trạng thái mới
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order._id === orderId 
+            ? { ...order, status: newStatus }
+            : order
+        )
+      );
 
       setEditingId(null);
+      setTempStatus(prev => {
+        const newTempStatus = { ...prev };
+        delete newTempStatus[orderId];
+        return newTempStatus;
+      });
+      
       toast.success('Cập nhật trạng thái đơn hàng thành công');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Không thể cập nhật trạng thái đơn hàng');
+      console.error('Error updating status:', error);
+      toast.error(error.message || 'Không thể cập nhật trạng thái đơn hàng');
+      // Khôi phục trạng thái cũ nếu có lỗi
+      const currentOrder = orders.find(o => o._id === orderId);
+      if (currentOrder) {
+        setTempStatus(prev => ({
+          ...prev,
+          [orderId]: currentOrder.status
+        }));
+      }
     } finally {
       setUpdatingStatus(false);
     }
@@ -141,7 +174,7 @@ const OrderList = () => {
       case 'cancelled':
         return 'Đã hủy';
       default:
-        return 'Chờ xử lý';
+        return status; // Trả về trạng thái gốc nếu không match
     }
   };
 
@@ -218,7 +251,7 @@ const OrderList = () => {
                         <Stack direction="row" spacing={1} alignItems="center">
                           <FormControl size="small" sx={{ minWidth: 120 }}>
                             <Select
-                              value={tempStatus[order._id] || order.status || 'pending'}
+                              value={tempStatus[order._id] || order.status}
                               onChange={(e) => setTempStatus({
                                 ...tempStatus,
                                 [order._id]: e.target.value
