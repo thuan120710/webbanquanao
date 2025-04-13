@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
+const OrderHistory = require("../models/OrderHistory");
 
 /**
  * @desc    Tạo đơn hàng mới
@@ -56,17 +57,27 @@ const createOrder = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
-    status: 'pending'
+    status: "pending",
   });
 
   try {
     // Lưu đơn hàng
     const createdOrder = await order.save();
 
+    // Lưu lịch sử đơn hàng
+    const orderHistory = new OrderHistory({
+      user: req.user._id,
+      order: createdOrder._id,
+      status: createdOrder.status,
+    });
+    await orderHistory.save();
+
+    console.log("Creating order history for order ID:", createdOrder._id);
+
     // Cập nhật số lượng trong kho
     for (const item of validatedItems) {
       await Product.findByIdAndUpdate(item.product, {
-        $inc: { countInStock: -item.quantity }
+        $inc: { countInStock: -item.quantity },
       });
     }
 
@@ -240,7 +251,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
 
   // Kiểm tra trạng thái hợp lệ
-  const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+  const validStatuses = ["pending", "processing", "completed", "cancelled"];
   if (!validStatuses.includes(status)) {
     res.status(400);
     throw new Error("Trạng thái không hợp lệ");
@@ -250,13 +261,13 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   order.status = status;
 
   // Nếu trạng thái là completed, tự động cập nhật isDelivered
-  if (status === 'completed') {
+  if (status === "completed") {
     order.isDelivered = true;
     order.deliveredAt = Date.now();
   }
 
   // Nếu trạng thái là cancelled, hoàn trả số lượng sản phẩm vào kho
-  if (status === 'cancelled' && !order.isCancelled) {
+  if (status === "cancelled" && !order.isCancelled) {
     for (const item of order.orderItems) {
       const product = await Product.findById(item.product);
       if (product) {
@@ -312,6 +323,51 @@ const removeFromCart = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @desc    Lấy lịch sử đơn hàng của người dùng
+ * @route   GET /api/orders/history
+ * @access  Private
+ */
+const getOrderHistory = asyncHandler(async (req, res) => {
+  try {
+    console.log("Getting order history for user:", req.user._id);
+
+    // Trước tiên, tìm tất cả lịch sử đơn hàng của người dùng
+    const orderHistories = await OrderHistory.find({
+      user: req.user._id,
+    });
+
+    // Sau đó, tìm các đơn hàng tương ứng và populate thông tin sản phẩm
+    const populatedOrderHistories = await Promise.all(
+      orderHistories.map(async (history) => {
+        const order = await Order.findById(history.order).populate({
+          path: "orderItems.product",
+          model: "Product",
+          select: "name image price description countInStock",
+        });
+
+        // Trả về lịch sử đơn hàng với đơn hàng đã được populate
+        return {
+          ...history.toObject(),
+          order: order,
+        };
+      })
+    );
+
+    console.log(
+      "Order history retrieved successfully:",
+      populatedOrderHistories.length,
+      "records"
+    );
+    res.json(populatedOrderHistories);
+  } catch (error) {
+    console.error("Error retrieving order history:", error);
+    res
+      .status(500)
+      .json({ message: "Lỗi khi lấy lịch sử đặt hàng: " + error.message });
+  }
+});
+
 module.exports = {
   createOrder,
   getOrderById,
@@ -322,4 +378,5 @@ module.exports = {
   cancelOrder,
   updateOrderStatus,
   removeFromCart,
+  getOrderHistory,
 };
