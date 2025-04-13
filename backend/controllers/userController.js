@@ -130,6 +130,7 @@ const getUserProfile = asyncHandler(async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       isAdmin: user.isAdmin,
+      avatar: user.avatar
     });
   } else {
     res.status(404);
@@ -418,6 +419,34 @@ const resetPassword = asyncHandler(async (req, res) => {
   res.json({ message: 'Mật khẩu đã được đặt lại thành công' });
 });
 
+/**
+ * @desc    Upload ảnh đại diện cho người dùng
+ * @route   POST /api/users/profile/upload-avatar
+ * @access  Private
+ */
+const uploadAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('Vui lòng chọn ảnh để tải lên');
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    res.status(404);
+    throw new Error('Không tìm thấy người dùng');
+  }
+
+  // Cập nhật đường dẫn ảnh
+  const avatarPath = `/uploads/avatars/${req.file.filename}`;
+  user.avatar = avatarPath;
+  await user.save();
+
+  res.json({
+    message: 'Tải ảnh lên thành công',
+    avatar: avatarPath
+  });
+});
+
 module.exports = {
   authUser,
   registerUser,
@@ -428,5 +457,6 @@ module.exports = {
   getUserById,
   updateUser,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  uploadAvatar
 };
