@@ -56,6 +56,7 @@ const createOrder = asyncHandler(async (req, res) => {
     taxPrice,
     shippingPrice,
     totalPrice,
+    status: 'pending'
   });
 
   try {
@@ -225,14 +226,48 @@ const cancelOrder = asyncHandler(async (req, res) => {
 const updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
-  if (order) {
-    order.status = req.body.status || order.status;
-    const updatedOrder = await order.save();
-    res.json(updatedOrder);
-  } else {
+  if (!order) {
     res.status(404);
     throw new Error("Không tìm thấy đơn hàng");
   }
+
+  // Kiểm tra quyền cập nhật (chỉ admin mới được cập nhật)
+  if (!req.user.isAdmin) {
+    res.status(403);
+    throw new Error("Bạn không có quyền cập nhật trạng thái đơn hàng");
+  }
+
+  const { status } = req.body;
+
+  // Kiểm tra trạng thái hợp lệ
+  const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+  if (!validStatuses.includes(status)) {
+    res.status(400);
+    throw new Error("Trạng thái không hợp lệ");
+  }
+
+  // Cập nhật trạng thái
+  order.status = status;
+
+  // Nếu trạng thái là completed, tự động cập nhật isDelivered
+  if (status === 'completed') {
+    order.isDelivered = true;
+    order.deliveredAt = Date.now();
+  }
+
+  // Nếu trạng thái là cancelled, hoàn trả số lượng sản phẩm vào kho
+  if (status === 'cancelled' && !order.isCancelled) {
+    for (const item of order.orderItems) {
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.countInStock += item.quantity;
+        await product.save();
+      }
+    }
+  }
+
+  const updatedOrder = await order.save();
+  res.json(updatedOrder);
 });
 
 /**
