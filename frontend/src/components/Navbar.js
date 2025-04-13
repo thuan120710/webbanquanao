@@ -214,113 +214,105 @@ const Navbar = () => {
                           backgroundColor: alpha(theme.palette.common.white, 0.25),
                         },
                         marginRight: theme.spacing(2),
+                        marginLeft: 0,
                         width: '100%',
                       }}
                     >
+                      <Box sx={{ padding: theme.spacing(0, 2), height: '100%', position: 'absolute', display: 'flex', alignItems: 'center' }}>
+                        <SearchIcon />
+                      </Box>
                       <InputBase
                         sx={{
                           color: 'inherit',
-                          padding: theme.spacing(1, 1, 1, 2),
-                          transition: theme.transitions.create('width'),
+                          padding: theme.spacing(1, 1, 1, 0),
+                          paddingLeft: `calc(1em + ${theme.spacing(4)})`,
                           width: '100%',
                         }}
-                        placeholder="Tìm kiếm sản phẩm..."
-                        inputProps={{ 'aria-label': 'search' }}
+                        placeholder="Tìm kiếm..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        autoFocus
                       />
                     </Box>
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <IconButton color="inherit" onClick={handleSearchClick}>
-                  <SearchIcon />
-                </IconButton>
-              </motion.div>
+              <IconButton color="inherit" onClick={handleSearchClick}>
+                <SearchIcon />
+              </IconButton>
 
-              <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <IconButton
-                  color="inherit"
-                  component={Link}
-                  to="/cart"
-                >
-                  <Badge badgeContent={getCartItemCount()} color="error">
-                    <ShoppingCartIcon />
-                  </Badge>
-                </IconButton>
-              </motion.div>
+              <IconButton
+                color="inherit"
+                component={Link}
+                to="/cart"
+                sx={{ ml: 1 }}
+              >
+                <Badge badgeContent={getCartItemCount()} color="error">
+                  <ShoppingCartIcon />
+                </Badge>
+              </IconButton>
 
               {user ? (
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <>
                   <Tooltip title="Tài khoản">
                     <IconButton
                       onClick={handleProfileClick}
                       size="small"
                       sx={{ ml: 1 }}
-                      aria-controls={menuOpen ? 'account-menu' : undefined}
-                      aria-haspopup="true"
-                      aria-expanded={menuOpen ? 'true' : undefined}
                     >
-                      <Avatar
-                        sx={{
-                          width: 32,
+                      <Avatar 
+                        src={user.avatar ? `${process.env.REACT_APP_API_URL}${user.avatar}` : null}
+                        sx={{ 
+                          width: 32, 
                           height: 32,
-                          bgcolor: 'secondary.main',
-                          fontSize: '0.875rem',
+                          bgcolor: theme.palette.primary.main 
                         }}
                       >
-                        {user.firstName ? user.firstName.charAt(0) : user.email.charAt(0).toUpperCase()}
+                        {user.firstName ? user.firstName[0].toUpperCase() : 'U'}
                       </Avatar>
                     </IconButton>
                   </Tooltip>
-                </motion.div>
-              ) : (
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                  <Button
-                    color="inherit"
-                    component={Link}
-                    to="/login"
-                    startIcon={<LoginIcon />}
-                    sx={{ display: isMobile ? 'none' : 'flex' }}
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={menuOpen}
+                    onClose={handleMenuClose}
+                    onClick={handleMenuClose}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                   >
-                    Đăng nhập
-                  </Button>
-                </motion.div>
+                    <MenuItem component={Link} to="/profile">
+                      <ListItemIcon>
+                        <PersonIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>Thông tin cá nhân</ListItemText>
+                    </MenuItem>
+                    {user.isAdmin && (
+                      <MenuItem component={Link} to="/admin">
+                        <ListItemIcon>
+                          <DashboardIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Quản trị</ListItemText>
+                      </MenuItem>
+                    )}
+                    <MenuItem onClick={handleLogout}>
+                      <ListItemIcon>
+                        <LogoutIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText>Đăng xuất</ListItemText>
+                    </MenuItem>
+                  </Menu>
+                </>
+              ) : (
+                <Button
+                  color="inherit"
+                  component={Link}
+                  to="/login"
+                  startIcon={<LoginIcon />}
+                  sx={{ ml: 1 }}
+                >
+                  Đăng nhập
+                </Button>
               )}
-
-              <Menu
-                id="account-menu"
-                anchorEl={anchorEl}
-                open={menuOpen}
-                onClose={handleMenuClose}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-              >
-                <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>
-                  <ListItemIcon>
-                    <PersonIcon fontSize="small" />
-                  </ListItemIcon>
-                  Tài khoản
-                </MenuItem>
-                {user && user.isAdmin && (
-                  <MenuItem onClick={() => { handleMenuClose(); navigate('/admin'); }}>
-                    <ListItemIcon>
-                      <DashboardIcon fontSize="small" />
-                    </ListItemIcon>
-                    Dashboard
-                  </MenuItem>
-                )}
-                <Divider />
-                <MenuItem onClick={handleLogout}>
-                  <ListItemIcon>
-                    <LogoutIcon fontSize="small" />
-                  </ListItemIcon>
-                  Đăng xuất
-                </MenuItem>
-              </Menu>
             </Box>
           </Toolbar>
         </Container>
