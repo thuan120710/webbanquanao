@@ -24,6 +24,7 @@ import Profile from "./pages/Profile/Profile";
 import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import Categories from "./pages/Categories/Categories";
+import OrderHistory from "./pages/Order/OrderHistory";
 
 // Admin Pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -126,6 +127,14 @@ function App() {
                     element={
                       <PrivateRoute>
                         <OrderDetail />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/orders/history"
+                    element={
+                      <PrivateRoute>
+                        <OrderHistory />
                       </PrivateRoute>
                     }
                   />
