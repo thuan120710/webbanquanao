@@ -325,10 +325,14 @@ const Navbar = () => {
                           bgcolor: "secondary.main",
                           fontSize: "0.875rem",
                         }}
+                        src={user.avatar || user.profileImage}
+                        alt={user.firstName || user.email}
                       >
-                        {user.firstName
-                          ? user.firstName.charAt(0)
-                          : user.email.charAt(0).toUpperCase()}
+                        {!user.avatar && !user.profileImage && (
+                          user.firstName
+                            ? user.firstName.charAt(0)
+                            : user.email.charAt(0).toUpperCase()
+                        )}
                       </Avatar>
                     </IconButton>
                   </Tooltip>
