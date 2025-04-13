@@ -178,55 +178,56 @@ const deleteCoupon = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Kiểm tra mã giảm giá có hợp lệ không
+ * @desc    Validate mã giảm giá
  * @route   POST /api/coupons/validate
  * @access  Private
  */
 const validateCoupon = asyncHandler(async (req, res) => {
-  const { code, totalAmount } = req.body;
+  const { code, cartTotal } = req.body;
 
-  const coupon = await Coupon.findOne({ code, isActive: true });
+  if (!code) {
+    res.status(400);
+    throw new Error('Vui lòng nhập mã giảm giá');
+  }
+
+  const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
   if (!coupon) {
     res.status(404);
-    throw new Error('Mã giảm giá không tồn tại hoặc không hoạt động');
+    throw new Error('Mã giảm giá không tồn tại');
   }
 
-  // Kiểm tra ngày hợp lệ
-  const now = new Date();
-  if (now < coupon.startDate || now > coupon.endDate) {
+  // Kiểm tra mã giảm giá còn hiệu lực không
+  if (!coupon.isValid()) {
     res.status(400);
-    throw new Error('Mã giảm giá không trong thời gian sử dụng');
-  }
-
-  // Kiểm tra số lần sử dụng tối đa
-  if (coupon.usageLimit !== null && coupon.usageLimit !== undefined && coupon.usageCount >= coupon.usageLimit) {
-    res.status(400);
-    throw new Error('Mã giảm giá đã đạt giới hạn sử dụng');
+    throw new Error('Mã giảm giá đã hết hạn hoặc không còn hiệu lực');
   }
 
   // Kiểm tra giá trị đơn hàng tối thiểu
-  if (totalAmount && coupon.minimumPurchase > totalAmount) {
+  if (cartTotal < coupon.minimumPurchase) {
     res.status(400);
     throw new Error(`Giá trị đơn hàng tối thiểu phải từ ${coupon.minimumPurchase.toLocaleString('vi-VN')}đ`);
   }
 
-  // Tính toán số tiền giảm giá
-  let discountAmount = 0;
-  if (coupon.discountType === 'percentage') {
-    discountAmount = (totalAmount * coupon.discountValue) / 100;
-    if (coupon.maximumDiscount && discountAmount > coupon.maximumDiscount) {
-      discountAmount = coupon.maximumDiscount;
+  // Kiểm tra giới hạn sử dụng
+  if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+    res.status(400);
+    throw new Error('Mã giảm giá đã hết lượt sử dụng');
+  }
+
+  // Kiểm tra người dùng có được phép sử dụng không
+  if (coupon.userRestriction && coupon.allowedUsers.length > 0) {
+    if (!coupon.allowedUsers.includes(req.user._id)) {
+      res.status(403);
+      throw new Error('Bạn không được phép sử dụng mã giảm giá này');
     }
-  } else {
-    discountAmount = coupon.discountValue;
   }
 
   res.json({
-    valid: true,
-    coupon,
-    discountAmount,
-    finalAmount: totalAmount - discountAmount
+    code: coupon.code,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue,
+    maximumDiscount: coupon.maximumDiscount
   });
 });
 
@@ -269,6 +270,46 @@ const applyCoupon = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Lấy danh sách mã giảm giá khả dụng cho người dùng
+ * @route   GET /api/coupons/available
+ * @access  Private
+ */
+const getAvailableCoupons = asyncHandler(async (req, res) => {
+  const now = new Date();
+  
+  const coupons = await Coupon.find({
+    isActive: true,
+    startDate: { $lte: now },
+    endDate: { $gte: now },
+    $or: [
+      { usageLimit: { $exists: false } },
+      { usageLimit: null },
+      {
+        $expr: {
+          $lt: ["$usageCount", "$usageLimit"]
+        }
+      }
+    ]
+  }).select('code description discountType discountValue minimumPurchase maximumDiscount usageLimit usageCount endDate');
+
+  // Format lại dữ liệu trước khi trả về
+  const formattedCoupons = coupons.map(coupon => ({
+    code: coupon.code,
+    description: coupon.description,
+    discountType: coupon.discountType,
+    discountValue: coupon.discountValue,
+    minimumPurchase: coupon.minimumPurchase,
+    maximumDiscount: coupon.maximumDiscount,
+    usageLimit: coupon.usageLimit,
+    usageCount: coupon.usageCount || 0,
+    endDate: coupon.endDate,
+    remainingUses: coupon.usageLimit ? coupon.usageLimit - (coupon.usageCount || 0) : null
+  }));
+
+  res.json(formattedCoupons);
+});
+
 module.exports = {
   createCoupon,
   getCoupons,
@@ -276,5 +317,6 @@ module.exports = {
   updateCoupon,
   deleteCoupon,
   validateCoupon,
-  applyCoupon
+  applyCoupon,
+  getAvailableCoupons
 };

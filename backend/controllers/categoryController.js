@@ -2,12 +2,12 @@ const Category = require('../models/Category');
 const asyncHandler = require('express-async-handler');
 
 /**
- * @desc    Tạo danh mục mới
- * @route   POST /api/categories
- * @access  Private/Admin
+ Tạo danh mục mới
+ POST /api/categories
+
  */
 const createCategory = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, image, order } = req.body;
 
   // Kiểm tra xem danh mục đã tồn tại chưa
   const categoryExists = await Category.findOne({ name });
@@ -31,7 +31,11 @@ const createCategory = asyncHandler(async (req, res) => {
     name,
     description,
     slug,
-    isActive: true
+    image,
+    order,
+    isActive: true,
+    isDeleted: false,
+    deletedAt: null
   });
 
   if (category) {
@@ -43,12 +47,41 @@ const createCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Lấy tất cả danh mục
- * @route   GET /api/categories
- * @access  Public
+Lấy tất cả danh mục
+GET /api/categories
+
  */
 const getCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find({});
+  const { showDeleted, sort } = req.query;
+
+  // Xây dựng điều kiện tìm kiếm
+  const query = {};
+  
+  // Nếu không yêu cầu hiển thị danh mục đã xóa, chỉ lấy danh mục chưa xóa
+  if (!showDeleted) {
+    query.isDeleted = false;
+  }
+
+  // Sắp xếp
+  let sortOption = { order: 1 }; // Mặc định sắp xếp theo order
+  if (sort) {
+    switch (sort) {
+      case 'name_asc':
+        sortOption = { name: 1 };
+        break;
+      case 'name_desc':
+        sortOption = { name: -1 };
+        break;
+      case 'newest':
+        sortOption = { createdAt: -1 };
+        break;
+      case 'oldest':
+        sortOption = { createdAt: 1 };
+        break;
+    }
+  }
+
+  const categories = await Category.find(query).sort(sortOption);
   res.json(categories);
 });
 
@@ -74,7 +107,7 @@ const getCategoryById = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const updateCategory = asyncHandler(async (req, res) => {
-  const { name, description, image } = req.body;
+  const { name, description, image, order, isActive } = req.body;
 
   const category = await Category.findById(req.params.id);
 
@@ -93,6 +126,8 @@ const updateCategory = asyncHandler(async (req, res) => {
     category.name = name || category.name;
     category.description = description || category.description;
     category.image = image || category.image;
+    category.order = order !== undefined ? order : category.order;
+    category.isActive = isActive !== undefined ? isActive : category.isActive;
 
     const updatedCategory = await category.save();
     res.json(updatedCategory);
@@ -103,15 +138,27 @@ const updateCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc    Xóa danh mục
+ * @desc    Xóa mềm danh mục
  * @route   DELETE /api/categories/:id
  * @access  Private/Admin
  */
 const deleteCategory = asyncHandler(async (req, res) => {
-  const category = await Category.findByIdAndDelete(req.params.id);
+  const category = await Category.findById(req.params.id);
 
   if (category) {
-    res.json({ message: 'Danh mục đã được xóa', category });
+    // Thực hiện xóa mềm
+    category.isDeleted = true;
+    category.deletedAt = new Date();
+    await category.save();
+
+    res.json({ 
+      message: 'Danh mục đã được xóa thành công',
+      category: {
+        _id: category._id,
+        name: category.name,
+        deletedAt: category.deletedAt
+      }
+    });
   } else {
     res.status(404);
     throw new Error('Không tìm thấy danh mục');
@@ -123,5 +170,5 @@ module.exports = {
   getCategories,
   getCategoryById,
   updateCategory,
-  deleteCategory,
+  deleteCategory
 };

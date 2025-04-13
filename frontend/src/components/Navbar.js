@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   AppBar,
   Box,
@@ -22,7 +22,7 @@ import {
   Divider,
   InputBase,
   alpha,
-} from '@mui/material';
+} from "@mui/material";
 import {
   ShoppingCart as ShoppingCartIcon,
   Menu as MenuIcon,
@@ -35,22 +35,22 @@ import {
   Home as HomeIcon,
   Category as CategoryIcon,
   Settings as SettingsIcon,
-} from '@mui/icons-material';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
+} from "@mui/icons-material";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 const Navbar = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
   const location = useLocation();
 
   const { user, logout } = useAuth();
   const { cart } = useCart();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchVisible, setSearchVisible] = useState(false);
@@ -60,24 +60,24 @@ const Navbar = () => {
   // Animation variants
   const logoVariants = {
     hidden: { opacity: 0, x: -20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } }
+    visible: { opacity: 1, x: 0, transition: { duration: 0.5 } },
   };
 
   const navItemVariants = {
     hidden: { opacity: 0, y: -10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };
 
   const searchVariants = {
     hidden: { opacity: 0, width: 0 },
-    visible: { opacity: 1, width: '250px', transition: { duration: 0.3 } }
+    visible: { opacity: 1, width: "250px", transition: { duration: 0.3 } },
   };
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/products?search=${searchQuery.trim()}`);
-      setSearchQuery('');
+      setSearchQuery("");
       setSearchVisible(false);
     }
   };
@@ -97,7 +97,7 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     handleMenuClose();
-    navigate('/');
+    navigate("/");
   };
 
   const handleDrawerToggle = () => {
@@ -108,19 +108,24 @@ const Navbar = () => {
     return cart.reduce((count, item) => count + item.quantity, 0);
   };
 
-  const isAdminPage = location.pathname.startsWith('/admin');
+  const isAdminPage = location.pathname.startsWith("/admin");
 
   return (
     <>
-      <AppBar 
-        position="fixed" 
+      <AppBar
+        position="fixed"
         color="primary"
         sx={{
           zIndex: (theme) => theme.zIndex.drawer + 1,
         }}
       >
         <Container maxWidth="lg">
-          <Toolbar sx={{ justifyContent: 'space-between', padding: isMobile ? '0 8px' : '0 16px' }}>
+          <Toolbar
+            sx={{
+              justifyContent: "space-between",
+              padding: isMobile ? "0 8px" : "0 16px",
+            }}
+          >
             {isMobile && (
               <IconButton
                 edge="start"
@@ -132,7 +137,7 @@ const Navbar = () => {
                 <MenuIcon />
               </IconButton>
             )}
-            
+
             <motion.div
               variants={logoVariants}
               initial="hidden"
@@ -143,58 +148,102 @@ const Navbar = () => {
                 component={Link}
                 to="/"
                 sx={{
-                  textDecoration: 'none',
-                  color: 'inherit',
+                  textDecoration: "none",
+                  color: "inherit",
                   fontWeight: 700,
-                  fontSize: isMobile ? '1.2rem' : '1.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
+                  fontSize: isMobile ? "1.2rem" : "1.5rem",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
                 <Box
                   component="span"
                   sx={{
-                    display: 'inline-block',
-                    backgroundColor: 'secondary.main',
-                    color: 'white',
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "inline-block",
+                    backgroundColor: "secondary.main",
+                    color: "white",
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     mr: 1,
-                    fontWeight: 'bold',
+                    fontWeight: "bold",
                   }}
                 >
                   S
                 </Box>
-                {!isMobile && 'SHOP ONLINE'}
+                {!isMobile && "SHOP ONLINE"}
               </Typography>
             </motion.div>
 
             {/* Desktop Navigation */}
             {!isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <motion.div variants={navItemVariants} initial="hidden" animate="visible">
-                  <Button color="inherit" component={Link} to="/" sx={{ mx: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <motion.div
+                  variants={navItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/"
+                    sx={{ mx: 1 }}
+                  >
                     Trang chủ
                   </Button>
                 </motion.div>
-                <motion.div variants={navItemVariants} initial="hidden" animate="visible" transition={{ delay: 0.1 }}>
-                  <Button color="inherit" component={Link} to="/products" sx={{ mx: 1 }}>
+                <motion.div
+                  variants={navItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ delay: 0.1 }}
+                >
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/products"
+                    sx={{ mx: 1 }}
+                  >
                     Sản phẩm
                   </Button>
                 </motion.div>
-                <motion.div variants={navItemVariants} initial="hidden" animate="visible" transition={{ delay: 0.2 }}>
-                  <Button color="inherit" component={Link} to="/categories" sx={{ mx: 1 }}>
+                <motion.div
+                  variants={navItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ delay: 0.2 }}
+                >
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/categories"
+                    sx={{ mx: 1 }}
+                  >
                     Danh mục
+                  </Button>
+                </motion.div>
+                <motion.div
+                  variants={navItemVariants}
+                  initial="hidden"
+                  animate="visible"
+                  transition={{ delay: 0.3 }}
+                >
+                  <Button
+                    color="inherit"
+                    component={Link}
+                    to="/profile/orders/history"
+                    sx={{ mx: 1 }}
+                  >
+                    Lịch sử đặt hàng
                   </Button>
                 </motion.div>
               </Box>
             )}
 
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               <AnimatePresence>
                 {searchVisible && (
                   <motion.div
@@ -207,25 +256,31 @@ const Navbar = () => {
                       component="form"
                       onSubmit={handleSearchSubmit}
                       sx={{
-                        position: 'relative',
+                        position: "relative",
                         borderRadius: theme.shape.borderRadius,
-                        backgroundColor: alpha(theme.palette.common.white, 0.15),
-                        '&:hover': {
-                          backgroundColor: alpha(theme.palette.common.white, 0.25),
+                        backgroundColor: alpha(
+                          theme.palette.common.white,
+                          0.15
+                        ),
+                        "&:hover": {
+                          backgroundColor: alpha(
+                            theme.palette.common.white,
+                            0.25
+                          ),
                         },
                         marginRight: theme.spacing(2),
-                        width: '100%',
+                        width: "100%",
                       }}
                     >
                       <InputBase
                         sx={{
-                          color: 'inherit',
+                          color: "inherit",
                           padding: theme.spacing(1, 1, 1, 2),
-                          transition: theme.transitions.create('width'),
-                          width: '100%',
+                          transition: theme.transitions.create("width"),
+                          width: "100%",
                         }}
                         placeholder="Tìm kiếm sản phẩm..."
-                        inputProps={{ 'aria-label': 'search' }}
+                        inputProps={{ "aria-label": "search" }}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         autoFocus
@@ -242,11 +297,7 @@ const Navbar = () => {
               </motion.div>
 
               <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                <IconButton
-                  color="inherit"
-                  component={Link}
-                  to="/cart"
-                >
+                <IconButton color="inherit" component={Link} to="/cart">
                   <Badge badgeContent={getCartItemCount()} color="error">
                     <ShoppingCartIcon />
                   </Badge>
@@ -254,37 +305,49 @@ const Navbar = () => {
               </motion.div>
 
               {user ? (
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <Tooltip title="Tài khoản">
                     <IconButton
                       onClick={handleProfileClick}
                       size="small"
                       sx={{ ml: 1 }}
-                      aria-controls={menuOpen ? 'account-menu' : undefined}
+                      aria-controls={menuOpen ? "account-menu" : undefined}
                       aria-haspopup="true"
-                      aria-expanded={menuOpen ? 'true' : undefined}
+                      aria-expanded={menuOpen ? "true" : undefined}
                     >
                       <Avatar
                         sx={{
                           width: 32,
                           height: 32,
-                          bgcolor: 'secondary.main',
-                          fontSize: '0.875rem',
+                          bgcolor: "secondary.main",
+                          fontSize: "0.875rem",
                         }}
+                        src={user.avatar || user.profileImage}
+                        alt={user.firstName || user.email}
                       >
-                        {user.firstName ? user.firstName.charAt(0) : user.email.charAt(0).toUpperCase()}
+                        {!user.avatar && !user.profileImage && (
+                          user.firstName
+                            ? user.firstName.charAt(0)
+                            : user.email.charAt(0).toUpperCase()
+                        )}
                       </Avatar>
                     </IconButton>
                   </Tooltip>
                 </motion.div>
               ) : (
-                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                   <Button
                     color="inherit"
                     component={Link}
                     to="/login"
                     startIcon={<LoginIcon />}
-                    sx={{ display: isMobile ? 'none' : 'flex' }}
+                    sx={{ display: isMobile ? "none" : "flex" }}
                   >
                     Đăng nhập
                   </Button>
@@ -296,17 +359,27 @@ const Navbar = () => {
                 anchorEl={anchorEl}
                 open={menuOpen}
                 onClose={handleMenuClose}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                transformOrigin={{ horizontal: "right", vertical: "top" }}
+                anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
               >
-                <MenuItem onClick={() => { handleMenuClose(); navigate('/profile'); }}>
+                <MenuItem
+                  onClick={() => {
+                    handleMenuClose();
+                    navigate("/profile");
+                  }}
+                >
                   <ListItemIcon>
                     <PersonIcon fontSize="small" />
                   </ListItemIcon>
                   Tài khoản
                 </MenuItem>
                 {user && user.isAdmin && (
-                  <MenuItem onClick={() => { handleMenuClose(); navigate('/admin'); }}>
+                  <MenuItem
+                    onClick={() => {
+                      handleMenuClose();
+                      navigate("/admin");
+                    }}
+                  >
                     <ListItemIcon>
                       <DashboardIcon fontSize="small" />
                     </ListItemIcon>
@@ -334,58 +407,119 @@ const Navbar = () => {
         sx={{
           width: 240,
           flexShrink: 0,
-          '& .MuiDrawer-paper': {
+          "& .MuiDrawer-paper": {
             width: 240,
-            boxSizing: 'border-box',
-            top: ['56px', '64px'],
-            height: 'calc(100% - 56px)',
-            '@media (min-width: 0px) and (orientation: landscape)': {
-              top: '48px',
-              height: 'calc(100% - 48px)',
+            boxSizing: "border-box",
+            top: ["56px", "64px"],
+            height: "calc(100% - 56px)",
+            "@media (min-width: 0px) and (orientation: landscape)": {
+              top: "48px",
+              height: "calc(100% - 48px)",
             },
-            '@media (min-width: 600px)': {
-              top: '64px',
-              height: 'calc(100% - 64px)',
+            "@media (min-width: 600px)": {
+              top: "64px",
+              height: "calc(100% - 64px)",
             },
           },
         }}
       >
-        <Box sx={{ overflow: 'auto', mt: 2 }}>
+        <Box sx={{ overflow: "auto", mt: 2 }}>
           <List>
-            <ListItem button component={Link} to="/" onClick={handleDrawerToggle}>
-              <ListItemIcon><HomeIcon /></ListItemIcon>
+            <ListItem
+              button
+              component={Link}
+              to="/"
+              onClick={handleDrawerToggle}
+            >
+              <ListItemIcon>
+                <HomeIcon />
+              </ListItemIcon>
               <ListItemText primary="Trang chủ" />
             </ListItem>
-            <ListItem button component={Link} to="/products" onClick={handleDrawerToggle}>
-              <ListItemIcon><ShoppingCartIcon /></ListItemIcon>
+            <ListItem
+              button
+              component={Link}
+              to="/products"
+              onClick={handleDrawerToggle}
+            >
+              <ListItemIcon>
+                <ShoppingCartIcon />
+              </ListItemIcon>
               <ListItemText primary="Sản phẩm" />
             </ListItem>
-            <ListItem button component={Link} to="/categories" onClick={handleDrawerToggle}>
-              <ListItemIcon><CategoryIcon /></ListItemIcon>
+            <ListItem
+              button
+              component={Link}
+              to="/categories"
+              onClick={handleDrawerToggle}
+            >
+              <ListItemIcon>
+                <CategoryIcon />
+              </ListItemIcon>
               <ListItemText primary="Danh mục" />
             </ListItem>
           </List>
           <Divider />
           <List>
             {!user ? (
-              <ListItem button component={Link} to="/login" onClick={handleDrawerToggle}>
-                <ListItemIcon><LoginIcon /></ListItemIcon>
+              <ListItem
+                button
+                component={Link}
+                to="/login"
+                onClick={handleDrawerToggle}
+              >
+                <ListItemIcon>
+                  <LoginIcon />
+                </ListItemIcon>
                 <ListItemText primary="Đăng nhập" />
               </ListItem>
             ) : (
               <>
-                <ListItem button component={Link} to="/profile" onClick={handleDrawerToggle}>
-                  <ListItemIcon><PersonIcon /></ListItemIcon>
+                <ListItem
+                  button
+                  component={Link}
+                  to="/profile/orders/history"
+                  onClick={handleDrawerToggle}
+                >
+                  <ListItemIcon>
+                    <ShoppingCartIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Lịch sử đặt hàng" />
+                </ListItem>
+                <ListItem
+                  button
+                  component={Link}
+                  to="/profile"
+                  onClick={handleDrawerToggle}
+                >
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
                   <ListItemText primary="Tài khoản" />
                 </ListItem>
                 {user.isAdmin && (
-                  <ListItem button component={Link} to="/admin" onClick={handleDrawerToggle}>
-                    <ListItemIcon><DashboardIcon /></ListItemIcon>
+                  <ListItem
+                    button
+                    component={Link}
+                    to="/admin"
+                    onClick={handleDrawerToggle}
+                  >
+                    <ListItemIcon>
+                      <DashboardIcon />
+                    </ListItemIcon>
                     <ListItemText primary="Dashboard" />
                   </ListItem>
                 )}
-                <ListItem button onClick={() => { handleLogout(); handleDrawerToggle(); }}>
-                  <ListItemIcon><LogoutIcon /></ListItemIcon>
+                <ListItem
+                  button
+                  onClick={() => {
+                    handleLogout();
+                    handleDrawerToggle();
+                  }}
+                >
+                  <ListItemIcon>
+                    <LogoutIcon />
+                  </ListItemIcon>
                   <ListItemText primary="Đăng xuất" />
                 </ListItem>
               </>
@@ -397,4 +531,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

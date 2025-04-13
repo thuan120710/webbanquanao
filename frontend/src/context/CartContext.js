@@ -1,63 +1,90 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import axios from 'axios';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+import { toast } from "react-toastify";
+import axios from "axios";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 const CartContext = createContext();
 
 const cartReducer = (state, action) => {
   try {
     switch (action.type) {
-      case 'ADD_TO_CART':
-        const existingItem = state.items.find(item => item._id === action.payload._id);
+      case "ADD_TO_CART":
+        const existingItem = state.items.find(
+          (item) => item._id === action.payload._id
+        );
         if (existingItem) {
           return {
             ...state,
-            items: state.items.map(item =>
+            items: state.items.map((item) =>
               item._id === action.payload._id
-                ? { ...item, quantity: item.quantity + 1 }
+                ? { 
+                    ...item, 
+                    quantity: item.quantity + 1,
+                    price: action.payload.price || item.price,
+                    name: action.payload.name || item.name,
+                    image: action.payload.image || item.image
+                  }
                 : item
-            )
+            ),
           };
         }
         return {
           ...state,
-          items: [...state.items, { ...action.payload, quantity: 1 }]
+          items: [...state.items, { 
+            ...action.payload, 
+            quantity: 1,
+            price: action.payload.price,
+            name: action.payload.name,
+            image: action.payload.image
+          }],
         };
 
-      case 'REMOVE_FROM_CART':
+      case "REMOVE_FROM_CART":
         return {
           ...state,
-          items: state.items.filter(item => item._id !== action.payload)
+          items: state.items.filter((item) => item._id !== action.payload),
         };
 
-      case 'UPDATE_QUANTITY':
+      case "UPDATE_QUANTITY":
         return {
           ...state,
-          items: state.items.map(item =>
-            item._id === action.payload.id
+          items: state.items.map((item) =>
+            item._id === action.payload.productId
               ? { ...item, quantity: action.payload.quantity }
               : item
-          )
+          ),
         };
 
-      case 'CLEAR_CART':
+      case "SET_COUPON":
         return {
           ...state,
-          items: []
+          appliedCoupon: action.payload
         };
 
-      case 'LOAD_CART':
+      case "REMOVE_COUPON":
         return {
           ...state,
-          items: action.payload
+          appliedCoupon: null
+        };
+
+      case "CLEAR_CART":
+        return {
+          ...state,
+          items: [],
+          appliedCoupon: null
+        };
+
+      case "LOAD_CART":
+        return {
+          ...state,
+          items: action.payload || [],
         };
 
       default:
         return state;
     }
   } catch (error) {
-    console.error('Error in cartReducer:', error);
+    console.error("Error in cartReducer:", error);
     return state;
   }
 };
@@ -65,47 +92,36 @@ const cartReducer = (state, action) => {
 // Custom toast options
 const toastOptions = {
   icon: <CheckCircleIcon fontSize="small" />,
-  className: 'custom-toast'
+  className: "custom-toast",
 };
 
-export const CartProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+const API_BASE_URL = "http://localhost:5000";
 
-  // Load cart from localStorage and verify products with database
+export const CartProvider = ({ children }) => {
+  const [state, dispatch] = useReducer(cartReducer, { 
+    items: [],
+    appliedCoupon: null
+  });
+
   useEffect(() => {
     const loadCart = async () => {
       try {
-        const savedCart = localStorage.getItem('cart');
-        if (savedCart) {
-          const parsedCart = JSON.parse(savedCart);
-          
-          // Verify each product with the database
-          const verifiedCart = [];
-          
-          for (const item of parsedCart) {
-            try {
-              // Verify this product exists in database
-              const { data } = await axios.get(`http://localhost:5000/api/products/${item._id}`);
-              
-              // If product exists, add it to verified cart with current quantity
-              if (data) {
-                verifiedCart.push({
-                  ...data,
-                  quantity: item.quantity
-                });
-              }
-            } catch (err) {
-              console.error(`Product with ID ${item._id} not found in database`);
-              // Skip this product if it doesn't exist
-              continue;
-            }
-          }
-          
-          dispatch({ type: 'LOAD_CART', payload: verifiedCart });
+        const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+        if (!userInfo) return;
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${userInfo.token}`,
+          },
+        };
+
+        const { data } = await axios.get(`${API_BASE_URL}/api/cart`, config);
+        if (data && data.items) {
+          dispatch({ type: "LOAD_CART", payload: data.items });
         }
       } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
-        toast.error('Lỗi tải giỏ hàng', { autoClose: 2000 });
+        console.error("Error loading cart:", error);
+        toast.error("Lỗi tải giỏ hàng", { autoClose: 2000 });
       }
     };
 
@@ -115,95 +131,158 @@ export const CartProvider = ({ children }) => {
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     try {
-      localStorage.setItem('cart', JSON.stringify(state.items));
+      localStorage.setItem("cart", JSON.stringify(state.items));
     } catch (error) {
-      console.error('Error saving cart to localStorage:', error);
-      toast.error('Lỗi lưu giỏ hàng', { autoClose: 2000 });
+      console.error("Error saving cart to localStorage:", error);
+      toast.error("Lỗi lưu giỏ hàng", { autoClose: 2000 });
     }
   }, [state.items]);
 
   const addToCart = async (product) => {
     try {
       if (!product || !product._id) {
-        throw new Error('Invalid product data');
+        throw new Error("Invalid product data");
       }
-      
-      // Verify product is still in database before adding
-      const { data } = await axios.get(`http://localhost:5000/api/products/${product._id}`);
-      
-      if (!data) {
-        throw new Error('Sản phẩm không tồn tại trong cơ sở dữ liệu');
-      }
-      
-      // Use latest product data from database
-      dispatch({ type: 'ADD_TO_CART', payload: data });
-      toast.success('Đã thêm vào giỏ', toastOptions);
+
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      const { data } = await axios.post(
+        `${API_BASE_URL}/api/cart`,
+        { productId: product._id, quantity: 1 },
+        config
+      );
+
+      dispatch({ type: "LOAD_CART", payload: data.items });
+      toast.success("Đã thêm vào giỏ", toastOptions);
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error('Không thể thêm sản phẩm', { autoClose: 2000 });
+      console.error("Error adding to cart:", error);
+      toast.error("Không thể thêm sản phẩm", { autoClose: 2000 });
     }
   };
 
-  const removeFromCart = (productId) => {
+  const removeFromCart = async (productId) => {
     try {
-      dispatch({ type: 'REMOVE_FROM_CART', payload: productId });
-      toast.success('Đã xóa sản phẩm', toastOptions);
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+        },
+      };
+
+      await axios.delete(`${API_BASE_URL}/api/cart/${productId}`, config);
+      dispatch({ type: "REMOVE_FROM_CART", payload: productId });
+      toast.success("Đã xóa sản phẩm", toastOptions);
     } catch (error) {
-      console.error('Error removing from cart:', error);
-      toast.error('Không thể xóa sản phẩm', { autoClose: 2000 });
+      console.error("Error removing from cart:", error);
+      toast.error("Không thể xóa sản phẩm", { autoClose: 2000 });
     }
   };
 
   const updateQuantity = async (productId, quantity) => {
     try {
+      if (!productId) {
+        throw new Error("Product ID is required");
+      }
+
       if (quantity < 1) {
-        toast.error('Số lượng phải > 0', { autoClose: 2000 });
+        toast.error("Số lượng phải > 0", { autoClose: 2000 });
         return;
       }
-      
-      // Verify product still exists before updating quantity
-      const { data } = await axios.get(`http://localhost:5000/api/products/${productId}`);
-      
-      if (!data) {
-        throw new Error('Sản phẩm không tồn tại trong cơ sở dữ liệu');
-      }
-      
-      // Verify there's enough stock
-      if (data.countInStock < quantity) {
-        toast.error(`Chỉ còn ${data.countInStock} sản phẩm`, { autoClose: 2000 });
-        // Set to maximum available quantity
-        dispatch({
-          type: 'UPDATE_QUANTITY',
-          payload: { id: productId, quantity: data.countInStock }
-        });
+
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      if (!userInfo) {
+        toast.error("Vui lòng đăng nhập", { autoClose: 2000 });
         return;
       }
-      
-      dispatch({
-        type: 'UPDATE_QUANTITY',
-        payload: { id: productId, quantity }
-      });
-      toast.success('Đã cập nhật số lượng', toastOptions);
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${userInfo.token}`,
+          "Content-Type": "application/json",
+        },
+      };
+
+      const { data } = await axios.put(
+        `${API_BASE_URL}/api/cart/${productId}`,
+        { quantity },
+        config
+      );
+
+      if (data && data.items) {
+        dispatch({ type: "LOAD_CART", payload: data.items });
+        toast.success("Đã cập nhật số lượng", toastOptions);
+      }
     } catch (error) {
-      console.error('Error updating quantity:', error);
-      toast.error('Không thể cập nhật', { autoClose: 2000 });
+      console.error("Error updating quantity:", error);
+      toast.error(
+        error.response?.data?.message || "Không thể cập nhật số lượng",
+        { autoClose: 2000 }
+      );
     }
   };
 
   const clearCart = () => {
     try {
-      dispatch({ type: 'CLEAR_CART' });
-      toast.success('Đã xóa giỏ hàng', toastOptions);
+      dispatch({ type: "CLEAR_CART" });
+      toast.success("Đã xóa giỏ hàng", toastOptions);
     } catch (error) {
-      console.error('Error clearing cart:', error);
-      toast.error('Không thể xóa giỏ hàng', { autoClose: 2000 });
+      console.error("Error clearing cart:", error);
+      toast.error("Không thể xóa giỏ hàng", { autoClose: 2000 });
     }
   };
 
   const cartTotal = state.items.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => {
+      const price = item.price || (item.product && item.product.price) || 0;
+      const quantity = item.quantity || 0;
+      return total + (price * quantity);
+    },
     0
   );
+
+  const applyCoupon = (coupon) => {
+    dispatch({ type: "SET_COUPON", payload: coupon });
+  };
+
+  const removeCoupon = () => {
+    dispatch({ type: "REMOVE_COUPON" });
+  };
+
+  const calculateDiscount = () => {
+    if (!state.appliedCoupon) return 0;
+    
+    const subtotal = cartTotal;
+    if (state.appliedCoupon.discountType === 'percentage') {
+      const discount = (subtotal * state.appliedCoupon.discountValue) / 100;
+      return state.appliedCoupon.maximumDiscount 
+        ? Math.min(discount, state.appliedCoupon.maximumDiscount)
+        : discount;
+    }
+    return state.appliedCoupon.discountValue;
+  };
+
+  const finalTotal = cartTotal - calculateDiscount();
+
+  const placeOrder = async (orderData) => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
+      const config = {
+        headers: { Authorization: `Bearer ${userInfo.token}` },
+      };
+
+      await axios.post("http://localhost:5000/api/orders", orderData, config);
+      dispatch({ type: "CLEAR_CART" });
+
+      toast.success("Đặt hàng thành công", toastOptions);
+    } catch (error) {
+      toast.error("Không thể đặt hàng", { autoClose: 2000 });
+    }
+  };
 
   return (
     <CartContext.Provider
@@ -213,7 +292,13 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         clearCart,
-        cartTotal
+        cartTotal,
+        appliedCoupon: state.appliedCoupon,
+        applyCoupon,
+        removeCoupon,
+        calculateDiscount,
+        finalTotal,
+        placeOrder,
       }}
     >
       {children}
@@ -224,7 +309,7 @@ export const CartProvider = ({ children }) => {
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
-}; 
+};
