@@ -24,8 +24,11 @@ import Profile from "./pages/Profile/Profile";
 import LoginPage from "./pages/Login/LoginPage";
 import RegisterForm from "./components/RegisterForm";
 import Categories from "./pages/Categories/Categories";
-import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
-import ResetPassword from './pages/ResetPassword/ResetPassword';
+
+import OrderHistory from "./pages/Order/OrderHistory";
+
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
 // Admin Pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -90,7 +93,10 @@ function App() {
                     element={<GoogleAuthCallback />}
                   />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password/:token" element={<ResetPassword />} />
+                  <Route
+                    path="/reset-password/:token"
+                    element={<ResetPassword />}
+                  />
 
                   {/* Protected Routes */}
                   <Route
@@ -130,6 +136,14 @@ function App() {
                     element={
                       <PrivateRoute>
                         <OrderDetail />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/orders/history"
+                    element={
+                      <PrivateRoute>
+                        <OrderHistory />
                       </PrivateRoute>
                     }
                   />
