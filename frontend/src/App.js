@@ -24,6 +24,7 @@ import Profile from "./pages/Profile/Profile";
 import LoginPage from "./pages/Login/LoginPage";
 import RegisterForm from "./components/RegisterForm";
 import Categories from "./pages/Categories/Categories";
+import PaymentConfirmation from "./pages/Order/PaymentConfirmation";
 
 import OrderHistory from "./pages/Order/OrderHistory";
 
@@ -40,6 +41,7 @@ import BrandManagement from "./pages/admin/BrandManagement";
 import CouponManagement from "./pages/admin/CouponManagement";
 import GoogleAuthCallback from "./pages/Auth/GoogleAuthCallback";
 import AdminOrderDetail from "./pages/admin/OrderDetail";
+import VnpayReturn from './pages/Payment/VnpayReturn';
 
 function App() {
   return (
@@ -104,6 +106,14 @@ function App() {
                     element={
                       <PrivateRoute>
                         <Checkout />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/payment-confirmation"
+                    element={
+                      <PrivateRoute>
+                        <PaymentConfirmation />
                       </PrivateRoute>
                     }
                   />
@@ -213,6 +223,7 @@ function App() {
                       </AdminRoute>
                     }
                   />
+                  <Route path="/payment/vnpay-return" element={<VnpayReturn />} />
                 </Routes>
               </Box>
               <Footer />
