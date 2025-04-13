@@ -206,6 +206,11 @@ const OrderDetail = () => {
           <Grid container spacing={2} justifyContent="flex-end">
             <Grid item xs={12} md={4}>
               <Typography variant="subtitle1">Tạm tính:</Typography>
+              {order.discount > 0 && (
+                <Typography variant="subtitle1" color="error">
+                  Giảm giá:
+                </Typography>
+              )}
               <Typography variant="subtitle1">Phí vận chuyển:</Typography>
               <Typography variant="subtitle1">Thuế (10%):</Typography>
               <Divider sx={{ my: 1 }} />
@@ -213,17 +218,22 @@ const OrderDetail = () => {
             </Grid>
             <Grid item xs={12} md={3}>
               <Typography variant="subtitle1" align="right">
-                {order.itemsPrice?.toLocaleString('vi-VN')}đ
+                {(order.itemsPrice || 0).toLocaleString('vi-VN')}đ
+              </Typography>
+              {order.discount > 0 && (
+                <Typography variant="subtitle1" align="right" color="error">
+                  -{order.discount.toLocaleString('vi-VN')}đ
+                </Typography>
+              )}
+              <Typography variant="subtitle1" align="right">
+                {(order.shippingPrice || 0).toLocaleString('vi-VN')}đ
               </Typography>
               <Typography variant="subtitle1" align="right">
-                {order.shippingPrice?.toLocaleString('vi-VN')}đ
-              </Typography>
-              <Typography variant="subtitle1" align="right">
-                {order.taxPrice?.toLocaleString('vi-VN')}đ
+                {(order.taxPrice || 0).toLocaleString('vi-VN')}đ
               </Typography>
               <Divider sx={{ my: 1 }} />
               <Typography variant="h6" align="right">
-                {order.totalPrice?.toLocaleString('vi-VN')}đ
+                {(order.totalPrice || 0).toLocaleString('vi-VN')}đ
               </Typography>
             </Grid>
           </Grid>

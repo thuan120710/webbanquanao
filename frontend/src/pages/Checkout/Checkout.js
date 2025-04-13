@@ -27,7 +27,14 @@ const API_BASE_URL =
 const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { cart, clearCart } = useCart();
+  const { 
+    cart, 
+    clearCart, 
+    cartTotal,
+    appliedCoupon,
+    calculateDiscount,
+    finalTotal 
+  } = useCart();
   const { currentUser } = useAuth();
   const [error, setError] = useState("");
 
@@ -78,6 +85,9 @@ const Checkout = () => {
         orderItems: cart.map((item) => ({
           product: item.product?._id || item._id,
           quantity: item.quantity,
+          price: item.price,
+          name: item.name,
+          image: item.image
         })),
         shippingAddress: {
           fullName: shippingInfo.fullName,
@@ -92,7 +102,10 @@ const Checkout = () => {
         paymentMethod: paymentMethod,
         taxPrice: calculateTax(),
         shippingPrice: calculateShipping(),
-        totalPrice: calculateTotal(),
+        itemsPrice: cartTotal,
+        discountAmount: calculateDiscount(),
+        couponCode: appliedCoupon?.code,
+        totalPrice: finalTotal + calculateShipping() + calculateTax(),
       };
 
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
@@ -126,22 +139,12 @@ const Checkout = () => {
     }
   };
 
-  // Tính toán tổng tiền
-  const calculateSubtotal = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
-
   const calculateShipping = () => {
-    const subtotal = calculateSubtotal();
-    return subtotal > 500000 ? 0 : 30000;
+    return cartTotal > 500000 ? 0 : 30000;
   };
 
   const calculateTax = () => {
-    return Math.round(calculateSubtotal() * 0.1);
-  };
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateShipping() + calculateTax();
+    return Math.round(cartTotal * 0.1);
   };
 
   const formatCurrency = (amount) => {
@@ -333,9 +336,24 @@ const Checkout = () => {
                 </Grid>
                 <Grid item xs={6} sx={{ textAlign: "right" }}>
                   <Typography variant="body1">
-                    {formatCurrency(calculateSubtotal())}
+                    {formatCurrency(cartTotal)}
                   </Typography>
                 </Grid>
+
+                {appliedCoupon && (
+                  <>
+                    <Grid item xs={6}>
+                      <Typography variant="body1" color="error">
+                        Giảm giá:
+                      </Typography>
+                    </Grid>
+                    <Grid item xs={6} sx={{ textAlign: "right" }}>
+                      <Typography variant="body1" color="error">
+                        -{formatCurrency(calculateDiscount())}
+                      </Typography>
+                    </Grid>
+                  </>
+                )}
 
                 <Grid item xs={6}>
                   <Typography variant="body1">Phí vận chuyển:</Typography>
@@ -356,17 +374,17 @@ const Checkout = () => {
                     {formatCurrency(calculateTax())}
                   </Typography>
                 </Grid>
-              </Grid>
 
-              <Divider sx={{ my: 2 }} />
+                <Grid item xs={12}>
+                  <Divider sx={{ my: 2 }} />
+                </Grid>
 
-              <Grid container>
                 <Grid item xs={6}>
                   <Typography variant="h6">Tổng cộng:</Typography>
                 </Grid>
                 <Grid item xs={6} sx={{ textAlign: "right" }}>
                   <Typography variant="h6" color="primary.main">
-                    {formatCurrency(calculateTotal())}
+                    {formatCurrency(finalTotal + calculateShipping() + calculateTax())}
                   </Typography>
                 </Grid>
               </Grid>
@@ -375,6 +393,12 @@ const Checkout = () => {
             {calculateShipping() === 0 && (
               <Alert severity="success" sx={{ mt: 2 }}>
                 Bạn được miễn phí vận chuyển!
+              </Alert>
+            )}
+
+            {appliedCoupon && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                Đã áp dụng mã giảm giá: {appliedCoupon.code}
               </Alert>
             )}
           </Paper>

@@ -17,14 +17,26 @@ const cartReducer = (state, action) => {
             ...state,
             items: state.items.map((item) =>
               item._id === action.payload._id
-                ? { ...item, quantity: item.quantity + 1 }
+                ? { 
+                    ...item, 
+                    quantity: item.quantity + 1,
+                    price: action.payload.price || item.price,
+                    name: action.payload.name || item.name,
+                    image: action.payload.image || item.image
+                  }
                 : item
             ),
           };
         }
         return {
           ...state,
-          items: [...state.items, { ...action.payload, quantity: 1 }],
+          items: [...state.items, { 
+            ...action.payload, 
+            quantity: 1,
+            price: action.payload.price,
+            name: action.payload.name,
+            image: action.payload.image
+          }],
         };
 
       case "REMOVE_FROM_CART":
@@ -43,10 +55,23 @@ const cartReducer = (state, action) => {
           ),
         };
 
+      case "SET_COUPON":
+        return {
+          ...state,
+          appliedCoupon: action.payload
+        };
+
+      case "REMOVE_COUPON":
+        return {
+          ...state,
+          appliedCoupon: null
+        };
+
       case "CLEAR_CART":
         return {
           ...state,
           items: [],
+          appliedCoupon: null
         };
 
       case "LOAD_CART":
@@ -73,7 +98,10 @@ const toastOptions = {
 const API_BASE_URL = "http://localhost:5000";
 
 export const CartProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const [state, dispatch] = useReducer(cartReducer, { 
+    items: [],
+    appliedCoupon: null
+  });
 
   useEffect(() => {
     const loadCart = async () => {
@@ -209,9 +237,36 @@ export const CartProvider = ({ children }) => {
   };
 
   const cartTotal = state.items.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) => {
+      const price = item.price || (item.product && item.product.price) || 0;
+      const quantity = item.quantity || 0;
+      return total + (price * quantity);
+    },
     0
   );
+
+  const applyCoupon = (coupon) => {
+    dispatch({ type: "SET_COUPON", payload: coupon });
+  };
+
+  const removeCoupon = () => {
+    dispatch({ type: "REMOVE_COUPON" });
+  };
+
+  const calculateDiscount = () => {
+    if (!state.appliedCoupon) return 0;
+    
+    const subtotal = cartTotal;
+    if (state.appliedCoupon.discountType === 'percentage') {
+      const discount = (subtotal * state.appliedCoupon.discountValue) / 100;
+      return state.appliedCoupon.maximumDiscount 
+        ? Math.min(discount, state.appliedCoupon.maximumDiscount)
+        : discount;
+    }
+    return state.appliedCoupon.discountValue;
+  };
+
+  const finalTotal = cartTotal - calculateDiscount();
 
   const placeOrder = async (orderData) => {
     try {
@@ -238,6 +293,11 @@ export const CartProvider = ({ children }) => {
         updateQuantity,
         clearCart,
         cartTotal,
+        appliedCoupon: state.appliedCoupon,
+        applyCoupon,
+        removeCoupon,
+        calculateDiscount,
+        finalTotal,
         placeOrder,
       }}
     >
