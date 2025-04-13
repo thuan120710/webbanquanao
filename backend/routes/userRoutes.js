@@ -9,6 +9,8 @@ const {
   deleteUser,
   getUserById,
   updateUser,
+  forgotPassword,
+  resetPassword
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -19,6 +21,12 @@ router.route('/')
 
 // Route: /api/users/login
 router.post('/login', authUser);
+
+// Route: /api/users/forgot-password
+router.post('/forgot-password', forgotPassword);
+
+// Route: /api/users/reset-password/:token
+router.post('/reset-password/:token', resetPassword);
 
 // Route: /api/users/profile
 router.route('/profile')
