@@ -21,10 +21,14 @@ import OrderSuccess from "./pages/Order/OrderSuccess";
 import OrderList from "./pages/Order/OrderList";
 import OrderDetail from "./pages/Order/OrderDetail";
 import Profile from "./pages/Profile/Profile";
-import LoginForm from "./components/LoginForm";
+import LoginPage from "./pages/Login/LoginPage";
 import RegisterForm from "./components/RegisterForm";
 import Categories from "./pages/Categories/Categories";
+
 import OrderHistory from "./pages/Order/OrderHistory";
+
+import ForgotPassword from "./pages/ForgotPassword/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword/ResetPassword";
 
 // Admin Pages
 import Dashboard from "./pages/admin/Dashboard";
@@ -78,7 +82,7 @@ function App() {
                 <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<LoginForm />} />
+                  <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterForm />} />
                   <Route path="/products" element={<ProductList />} />
                   <Route path="/categories" element={<Categories />} />
@@ -87,6 +91,11 @@ function App() {
                   <Route
                     path="/auth/success"
                     element={<GoogleAuthCallback />}
+                  />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route
+                    path="/reset-password/:token"
+                    element={<ResetPassword />}
                   />
 
                   {/* Protected Routes */}
