@@ -3,16 +3,10 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const connectDB = require("./config/db");
 const passport = require("./config/passport");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
-
-// Debugging environment variables
-console.log("Environment loaded:", process.env.NODE_ENV);
-console.log("MONGO_URI exists:", !!process.env.MONGO_URI);
-console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
-console.log("GOOGLE_CLIENT_ID exists:", !!process.env.GOOGLE_CLIENT_ID);
-console.log("GOOGLE_CLIENT_SECRET exists:", !!process.env.GOOGLE_CLIENT_SECRET);
 
 // Connect to database
 connectDB();
@@ -23,6 +17,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use("/api/users", require("./routes/userRoutes"));
@@ -40,13 +37,6 @@ app.use("/api/auth", require("./routes/authRoutes"));
 // Base route
 app.get("/", (req, res) => {
   res.send("API is running...");
-});
-
-app.post("/api/orders", (req, res) => {
-  console.log("Request Headers:", req.headers);
-  console.log("Request Body:", req.body);
-
-  // Existing logic to handle the order...
 });
 
 // Error Middleware

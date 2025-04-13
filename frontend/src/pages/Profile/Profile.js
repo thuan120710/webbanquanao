@@ -18,7 +18,8 @@ import {
   DialogActions,
   TextField,
   Snackbar,
-  Alert
+  Alert,
+  IconButton
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -26,15 +27,19 @@ import {
   Edit as EditIcon,
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
-  ShoppingBag as ShoppingBagIcon
+  ShoppingBag as ShoppingBagIcon,
+  PhotoCamera as PhotoCameraIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const Profile = () => {
   const [userInfo, setUserInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [editedInfo, setEditedInfo] = useState({
     firstName: '',
     lastName: '',
@@ -48,6 +53,7 @@ const Profile = () => {
     severity: 'success'
   });
   const navigate = useNavigate();
+  const { updateUserAvatar } = useAuth();
 
   const fetchUserProfile = useCallback(async () => {
     try {
@@ -66,6 +72,7 @@ const Profile = () => {
 
       const { data } = await axios.get('/api/users/profile', config);
       setUserInfo(data);
+      setAvatarUrl(data.avatar ? `${process.env.REACT_APP_API_URL}${data.avatar}` : '/default-avatar.png');
       setEditedInfo({
         firstName: data.firstName || '',
         lastName: data.lastName || '',
@@ -139,6 +146,44 @@ const Profile = () => {
     navigate('/profile/orders');
   };
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      setUploading(true);
+      const storedUser = JSON.parse(localStorage.getItem('userInfo'));
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${storedUser.token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+
+      const { data } = await axios.post('/api/users/profile/upload-avatar', formData, config);
+      const newAvatarUrl = `${process.env.REACT_APP_API_URL}${data.avatar}`;
+      setUserInfo(prev => ({ ...prev, avatar: data.avatar }));
+      setAvatarUrl(newAvatarUrl);
+      updateUserAvatar(data.avatar);
+      setSnackbar({
+        open: true,
+        message: 'Cập nhật ảnh đại diện thành công',
+        severity: 'success'
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || 'Có lỗi xảy ra khi tải ảnh lên',
+        severity: 'error'
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Container>
@@ -148,57 +193,60 @@ const Profile = () => {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 3,
-          backdropFilter: 'blur(10px)',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          borderRadius: 2,
-          transition: 'transform 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'translateY(-2px)'
-          }
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1">
-            Thông tin cá nhân
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<EditIcon />}
-            onClick={handleEditClick}
-          >
-            Chỉnh sửa
-          </Button>
-        </Box>
-
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={4} sx={{ textAlign: 'center' }}>
-            <Avatar
-              sx={{
-                width: 150,
-                height: 150,
-                margin: '0 auto',
-                bgcolor: 'primary.main',
-                fontSize: '4rem'
-              }}
-            >
-              {userInfo?.firstName?.[0] || userInfo?.username?.[0]}
-            </Avatar>
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              {userInfo?.username}
-            </Typography>
-            {userInfo?.isAdmin && (
-              <Typography variant="body2" color="primary" sx={{ mt: 1 }}>
-                Quản trị viên
-              </Typography>
-            )}
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <Avatar
+                src={avatarUrl}
+                sx={{ 
+                  width: 150, 
+                  height: 150, 
+                  mb: 2,
+                  border: '2px solid #1976d2' 
+                }}
+                imgProps={{
+                  style: {
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    objectFit: 'cover'
+                  }
+                }}
+              />
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="avatar-upload"
+                type="file"
+                onChange={handleImageUpload}
+              />
+              <label htmlFor="avatar-upload">
+                <Button
+                  variant="contained"
+                  component="span"
+                  startIcon={<PhotoCameraIcon />}
+                  disabled={uploading}
+                >
+                  {uploading ? 'Đang tải lên...' : 'Thay đổi ảnh đại diện'}
+                </Button>
+              </label>
+            </Box>
           </Grid>
-
           <Grid item xs={12} md={8}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h4" component="h1">
+                Thông tin cá nhân
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<EditIcon />}
+                onClick={handleEditClick}
+              >
+                Chỉnh sửa
+              </Button>
+            </Box>
+
             <List>
               <ListItem>
                 <ListItemIcon>
