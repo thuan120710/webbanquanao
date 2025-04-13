@@ -81,6 +81,9 @@ const Checkout = () => {
     setError("");
 
     try {
+      // Tính toán tổng tiền cuối cùng
+      const totalAmount = finalTotal + calculateShipping() + calculateTax();
+      
       const orderData = {
         orderItems: cart.map((item) => ({
           product: item.product?._id || item._id,
@@ -105,7 +108,7 @@ const Checkout = () => {
         itemsPrice: cartTotal,
         discountAmount: calculateDiscount(),
         couponCode: appliedCoupon?.code,
-        totalPrice: finalTotal + calculateShipping() + calculateTax(),
+        totalPrice: totalAmount,
       };
 
       const userInfo = JSON.parse(localStorage.getItem("userInfo"));
@@ -116,23 +119,59 @@ const Checkout = () => {
         },
       };
 
-      console.log("Sending order data:", orderData);
-
-      const response = await axios.post(
+      // Tạo đơn hàng
+      const orderResponse = await axios.post(
         `${API_BASE_URL}/api/orders`,
         orderData,
         config
       );
-      console.log("Order created:", response.data);
+      
+      const orderId = orderResponse.data._id;
 
-      clearCart();
-      toast.success("Đặt hàng thành công!");
-      navigate(`/order-success?orderId=${response.data._id}`);
+      // Xử lý thanh toán dựa trên phương thức được chọn
+      if (paymentMethod === 'vnpay') {
+        try {
+          const vnpayResponse = await axios.post(
+            `${API_BASE_URL}/api/payments/vnpay/create-payment-url`,
+            {
+              orderId: orderId,
+              amount: totalAmount
+            },
+            config
+          );
+
+          if (vnpayResponse.data.vnpayUrl) {
+            // Lưu thông tin đơn hàng và URL thanh toán vào localStorage
+            localStorage.setItem('pendingOrder', JSON.stringify({
+              orderId,
+              totalAmount,
+              shippingInfo,
+              paymentMethod: 'vnpay',
+              vnpayUrl: vnpayResponse.data.vnpayUrl
+            }));
+            
+            // Chuyển hướng đến trang xác nhận thanh toán
+            navigate('/payment-confirmation');
+            return;
+          } else {
+            throw new Error('Không nhận được URL thanh toán từ VNPAY');
+          }
+        } catch (vnpayError) {
+          console.error('VNPAY payment error:', vnpayError);
+          setError('Có lỗi xảy ra khi tạo liên kết thanh toán VNPAY. Vui lòng thử lại.');
+          return;
+        }
+      } else {
+        // Xử lý thanh toán COD
+        clearCart();
+        toast.success("Đặt hàng thành công!");
+        navigate(`/order-success?orderId=${orderId}`);
+      }
     } catch (error) {
       console.error("Error placing order:", error);
       setError(
         error.response?.data?.message ||
-          "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại sau."
+        "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại sau."
       );
     } finally {
       setLoading(false);
@@ -264,14 +303,12 @@ const Checkout = () => {
             </Grid>
           </Paper>
 
-          <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              Phương thức thanh toán
-            </Typography>
+          <Paper sx={{ p: 3, borderRadius: 2, mt: 3 }}>
             <FormControl component="fieldset">
+              <Typography variant="h6" gutterBottom>
+                Phương thức thanh toán
+              </Typography>
               <RadioGroup
-                aria-label="payment-method"
-                name="paymentMethod"
                 value={paymentMethod}
                 onChange={handlePaymentMethodChange}
               >
@@ -281,126 +318,104 @@ const Checkout = () => {
                   label="Thanh toán khi nhận hàng (COD)"
                 />
                 <FormControlLabel
-                  value="banking"
+                  value="vnpay"
                   control={<Radio />}
-                  label="Chuyển khoản ngân hàng"
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <span>Thanh toán qua VNPAY</span>
+                      <img 
+                        src="/vnpay-logo.png" 
+                        alt="VNPAY" 
+                        style={{ height: 20 }}
+                      />
+                    </Box>
+                  }
                 />
               </RadioGroup>
             </FormControl>
-
-            <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                variant="contained"
-                color="primary"
-                size="large"
-                onClick={handlePlaceOrder}
-                disabled={loading || !isFormValid()}
-              >
-                {loading ? <CircularProgress size={24} /> : "Đặt hàng ngay"}
-              </Button>
-            </Box>
           </Paper>
         </Grid>
 
         <Grid item xs={12} md={4}>
           <Paper sx={{ p: 3, borderRadius: 2 }}>
             <Typography variant="h6" gutterBottom>
-              Đơn hàng của bạn
+              Tổng quan đơn hàng
             </Typography>
-
-            {cart.map((item) => (
-              <Box
-                key={item._id}
-                sx={{ py: 2, borderBottom: "1px solid #eee" }}
-              >
-                <Grid container>
-                  <Grid item xs={8}>
-                    <Typography variant="body1">{item.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.quantity} x {formatCurrency(item.price)}
+            <Box sx={{ mb: 2 }}>
+              <Grid container justifyContent="space-between">
+                <Grid item>
+                  <Typography>Tạm tính:</Typography>
+                </Grid>
+                <Grid item>
+                  <Typography>{formatCurrency(cartTotal)}</Typography>
+                </Grid>
+              </Grid>
+              
+              {appliedCoupon && (
+                <Grid container justifyContent="space-between">
+                  <Grid item>
+                    <Typography>Giảm giá:</Typography>
+                  </Grid>
+                  <Grid item>
+                    <Typography color="error">
+                      -{formatCurrency(calculateDiscount())}
                     </Typography>
                   </Grid>
-                  <Grid item xs={4} sx={{ textAlign: "right" }}>
-                    <Typography variant="body1">
-                      {formatCurrency(item.price * item.quantity)}
-                    </Typography>
-                  </Grid>
                 </Grid>
-              </Box>
-            ))}
+              )}
 
-            <Box sx={{ mt: 2 }}>
-              <Grid container spacing={1}>
-                <Grid item xs={6}>
-                  <Typography variant="body1">Tạm tính:</Typography>
+              <Grid container justifyContent="space-between">
+                <Grid item>
+                  <Typography>Phí vận chuyển:</Typography>
                 </Grid>
-                <Grid item xs={6} sx={{ textAlign: "right" }}>
-                  <Typography variant="body1">
-                    {formatCurrency(cartTotal)}
-                  </Typography>
-                </Grid>
-
-                {appliedCoupon && (
-                  <>
-                    <Grid item xs={6}>
-                      <Typography variant="body1" color="error">
-                        Giảm giá:
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={6} sx={{ textAlign: "right" }}>
-                      <Typography variant="body1" color="error">
-                        -{formatCurrency(calculateDiscount())}
-                      </Typography>
-                    </Grid>
-                  </>
-                )}
-
-                <Grid item xs={6}>
-                  <Typography variant="body1">Phí vận chuyển:</Typography>
-                </Grid>
-                <Grid item xs={6} sx={{ textAlign: "right" }}>
-                  <Typography variant="body1">
+                <Grid item>
+                  <Typography>
                     {calculateShipping() === 0
                       ? "Miễn phí"
                       : formatCurrency(calculateShipping())}
                   </Typography>
                 </Grid>
+              </Grid>
 
-                <Grid item xs={6}>
-                  <Typography variant="body1">Thuế (10%):</Typography>
+              <Grid container justifyContent="space-between">
+                <Grid item>
+                  <Typography>Thuế (10%):</Typography>
                 </Grid>
-                <Grid item xs={6} sx={{ textAlign: "right" }}>
-                  <Typography variant="body1">
-                    {formatCurrency(calculateTax())}
-                  </Typography>
+                <Grid item>
+                  <Typography>{formatCurrency(calculateTax())}</Typography>
                 </Grid>
+              </Grid>
 
-                <Grid item xs={12}>
-                  <Divider sx={{ my: 2 }} />
-                </Grid>
+              <Divider sx={{ my: 2 }} />
 
-                <Grid item xs={6}>
+              <Grid container justifyContent="space-between">
+                <Grid item>
                   <Typography variant="h6">Tổng cộng:</Typography>
                 </Grid>
-                <Grid item xs={6} sx={{ textAlign: "right" }}>
-                  <Typography variant="h6" color="primary.main">
+                <Grid item>
+                  <Typography variant="h6" color="primary">
                     {formatCurrency(finalTotal + calculateShipping() + calculateTax())}
                   </Typography>
                 </Grid>
               </Grid>
             </Box>
 
-            {calculateShipping() === 0 && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                Bạn được miễn phí vận chuyển!
-              </Alert>
-            )}
-
-            {appliedCoupon && (
-              <Alert severity="success" sx={{ mt: 2 }}>
-                Đã áp dụng mã giảm giá: {appliedCoupon.code}
-              </Alert>
-            )}
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              size="large"
+              onClick={handlePlaceOrder}
+              disabled={loading || !isFormValid()}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                `Đặt hàng (${formatCurrency(
+                  finalTotal + calculateShipping() + calculateTax()
+                )})`
+              )}
+            </Button>
           </Paper>
         </Grid>
       </Grid>
