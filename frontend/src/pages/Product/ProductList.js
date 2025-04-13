@@ -72,9 +72,13 @@ const ProductList = () => {
           <CircularProgress />
         </Box>
       ) : error ? (
-        <Box sx={{ color: "error.main", textAlign: "center", mt: 2 }}>
-          <Typography variant="h6">{error}</Typography>
-        </Box>
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      ) : products.length === 0 ? (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Không có sản phẩm nào được tìm thấy
+        </Alert>
       ) : (
         <Grid container spacing={2}>
           {products.map((product) => (

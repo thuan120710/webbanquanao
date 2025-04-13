@@ -19,7 +19,7 @@ const paymentSchema = mongoose.Schema(
     paymentMethod: {
       type: String,
       required: true,
-      enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cod', 'e_wallet'],
+      enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cod', 'e_wallet', 'vnpay'],
     },
     amount: {
       type: Number,

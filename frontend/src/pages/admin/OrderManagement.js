@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -15,17 +15,17 @@ import {
   IconButton,
   Tooltip,
   Divider,
-  Chip
-} from '@mui/material';
+  Chip,
+} from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
   Visibility as VisibilityIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  LocalShipping as ShippingIcon
-} from '@mui/icons-material';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+  LocalShipping as ShippingIcon,
+} from "@mui/icons-material";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
@@ -39,24 +39,27 @@ const OrderManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
       if (!userInfo || !userInfo.token) {
-        navigate('/login');
+        navigate("/login");
         return;
       }
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${userInfo.token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${userInfo.token}`,
+          "Content-Type": "application/json",
+        },
       };
 
-      const { data } = await axios.get('/api/orders', config);
+      const { data } = await axios.get("/api/orders", config);
       setOrders(Array.isArray(data) ? data : []);
       setError(null);
     } catch (error) {
-      setError(error.response?.data?.message || 'Có lỗi xảy ra khi tải danh sách đơn hàng');
+      setError(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra khi tải danh sách đơn hàng"
+      );
     } finally {
       setLoading(false);
     }
@@ -64,13 +67,21 @@ const OrderManagement = () => {
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      'pending': { label: 'Chờ xử lý', color: 'warning', icon: <CancelIcon /> },
-      'processing': { label: 'Đang xử lý', color: 'info', icon: <ShippingIcon /> },
-      'completed': { label: 'Hoàn thành', color: 'success', icon: <CheckCircleIcon /> },
-      'cancelled': { label: 'Đã hủy', color: 'error', icon: <CancelIcon /> }
+      pending: { label: "Chờ xử lý", color: "warning", icon: <CancelIcon /> },
+      processing: {
+        label: "Đang xử lý",
+        color: "info",
+        icon: <ShippingIcon />,
+      },
+      completed: {
+        label: "Hoàn thành",
+        color: "success",
+        icon: <CheckCircleIcon />,
+      },
+      cancelled: { label: "Đã hủy", color: "error", icon: <CancelIcon /> },
     };
 
-    const config = statusConfig[status] || statusConfig['pending'];
+    const config = statusConfig[status] || statusConfig["pending"];
 
     return (
       <Chip
@@ -84,31 +95,33 @@ const OrderManagement = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#f5f5f5', pt: 2, pb: 4 }}>
+    <Box sx={{ minHeight: "100vh", backgroundColor: "#f5f5f5", pt: 2, pb: 4 }}>
       <Container maxWidth="lg">
-        <Paper 
+        <Paper
           elevation={0}
-          sx={{ 
+          sx={{
             p: 3,
             borderRadius: 2,
-            backgroundColor: 'white',
-            mb: 3
+            backgroundColor: "white",
+            mb: 3,
           }}
         >
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 2, 
-            mb: 3
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              mb: 3,
+            }}
+          >
             <Tooltip title="Quay về Dashboard">
-              <IconButton 
-                onClick={() => navigate('/admin')}
-                sx={{ 
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.04)'
-                  }
+              <IconButton
+                onClick={() => navigate("/admin")}
+                sx={{
+                  color: "primary.main",
+                  "&:hover": {
+                    backgroundColor: "rgba(25, 118, 210, 0.04)",
+                  },
                 }}
               >
                 <ArrowBackIcon />
@@ -127,7 +140,11 @@ const OrderManagement = () => {
             </Alert>
           )}
 
-          <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2 }}>
+          <TableContainer
+            component={Paper}
+            elevation={0}
+            sx={{ borderRadius: 2 }}
+          >
             <Table>
               <TableHead>
                 <TableRow>
@@ -136,38 +153,44 @@ const OrderManagement = () => {
                   <TableCell sx={{ fontWeight: 600 }}>Ngày đặt</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Tổng tiền</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>Trạng thái</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">Thao tác</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }} align="right">
+                    Thao tác
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">Đang tải...</TableCell>
+                    <TableCell colSpan={6} align="center">
+                      Đang tải...
+                    </TableCell>
                   </TableRow>
                 ) : orders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">Không có đơn hàng nào</TableCell>
+                    <TableCell colSpan={6} align="center">
+                      Không có đơn hàng nào
+                    </TableCell>
                   </TableRow>
                 ) : (
                   orders.map((order) => (
                     <TableRow key={order._id} hover>
                       <TableCell>{order._id}</TableCell>
-                      <TableCell>{order.user?.name || 'N/A'}</TableCell>
+                      <TableCell>{order.user?.name || "N/A"}</TableCell>
                       <TableCell>
-                        {new Date(order.createdAt).toLocaleDateString('vi-VN')}
+                        {new Date(order.createdAt).toLocaleDateString("vi-VN")}
                       </TableCell>
                       <TableCell>
-                        {order.totalPrice?.toLocaleString('vi-VN')}đ
+                        {order.totalPrice?.toLocaleString("vi-VN")}đ
                       </TableCell>
-                      <TableCell>
-                        {getStatusChip(order.status)}
-                      </TableCell>
+                      <TableCell>{getStatusChip(order.status)}</TableCell>
                       <TableCell align="right">
                         <Tooltip title="Xem chi tiết">
                           <IconButton
                             color="primary"
                             size="small"
-                            onClick={() => navigate(`/admin/orders/${order._id}`)}
+                            onClick={() =>
+                              navigate(`/admin/orders/${order._id}`)
+                            }
                           >
                             <VisibilityIcon />
                           </IconButton>
@@ -185,4 +208,4 @@ const OrderManagement = () => {
   );
 };
 
-export default OrderManagement; 
+export default OrderManagement;

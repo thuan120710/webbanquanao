@@ -9,6 +9,8 @@ const {
   getMyPayments,
   getAllPayments,
   updatePaymentStatus,
+  createVnpayPayment,
+  handleVnpayReturn,
 } = require('../controllers/paymentController');
 
 // Route: /api/payments
@@ -23,5 +25,12 @@ router.route('/my').get(protect, getMyPayments); // Lấy thanh toán của ngư
 router.route('/:id')
   .get(protect, getPaymentById) // Lấy thông tin chi tiết của thanh toán
   .put(protect, admin, updatePaymentStatus); // Cập nhật trạng thái thanh toán (admin only)
+
+// VNPAY Routes
+router.route('/vnpay/create-payment-url')
+  .post(protect, createVnpayPayment); // Tạo URL thanh toán VNPAY
+
+router.route('/vnpay/return')
+  .get(handleVnpayReturn); // Xử lý kết quả thanh toán VNPAY
 
 module.exports = router;

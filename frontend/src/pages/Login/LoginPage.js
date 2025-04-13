@@ -114,19 +114,20 @@ const LoginPage = () => {
               {loading ? 'Đang xử lý...' : 'Đăng nhập'}
             </Button>
             
+            <Box textAlign="center" mb={2}>
+              <Link component={RouterLink} to="/forgot-password" variant="body2">
+                Quên mật khẩu?
+              </Link>
+            </Box>
+            
             <Divider sx={{ my: 2 }}>HOẶC</Divider>
             
             <GoogleLoginButton />
             
-            <Grid container justifyContent="space-between" sx={{ mt: 2 }}>
-              <Grid item>
-                <Link component={RouterLink} to="/forgot-password" variant="body2">
-                  Quên mật khẩu?
-                </Link>
-              </Grid>
+            <Grid container justifyContent="center" sx={{ mt: 2 }}>
               <Grid item>
                 <Link component={RouterLink} to="/register" variant="body2">
-                  Chưa có tài khoản? Đăng ký
+                  Chưa có tài khoản? Đăng ký ngay
                 </Link>
               </Grid>
             </Grid>

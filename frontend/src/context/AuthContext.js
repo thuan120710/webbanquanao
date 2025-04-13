@@ -122,6 +122,15 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Cập nhật avatar
+  const updateUserAvatar = (avatarPath) => {
+    if (user) {
+      const updatedUser = { ...user, avatar: avatarPath };
+      localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -132,6 +141,7 @@ export const AuthProvider = ({ children }) => {
         loginWithToken,
         register,
         logout,
+        updateUserAvatar
       }}
     >
       {children}
