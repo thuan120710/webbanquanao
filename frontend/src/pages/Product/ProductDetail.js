@@ -38,6 +38,7 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState(0);
   const [refreshReviews, setRefreshReviews] = useState(false);
+  const [reviewToEdit, setReviewToEdit] = useState(null);
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -94,6 +95,11 @@ const ProductDetail = () => {
 
   const handleReviewSubmitted = () => {
     setRefreshReviews(!refreshReviews);
+    setReviewToEdit(null);
+  };
+
+  const handleEditReview = (review) => {
+    setReviewToEdit(review);
   };
 
   // Animation variants
@@ -337,10 +343,12 @@ const ProductDetail = () => {
               <ReviewForm
                 productId={id}
                 onReviewSubmitted={handleReviewSubmitted}
+                reviewToEdit={reviewToEdit}
               />
               <ReviewList
                 productId={id}
                 key={refreshReviews ? "refresh" : "initial"}
+                onEditReview={handleEditReview}
               />
             </motion.div>
           )}

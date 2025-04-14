@@ -14,9 +14,9 @@ const createOrder = asyncHandler(async (req, res) => {
     orderItems,
     shippingAddress,
     paymentMethod,
-    taxPrice,
-    shippingPrice,
-    totalPrice,
+    // taxPrice,
+    // shippingPrice,
+    // totalPrice,
   } = req.body;
 
   if (!orderItems || orderItems.length === 0) {
@@ -26,6 +26,8 @@ const createOrder = asyncHandler(async (req, res) => {
 
   // Kiểm tra và xác thực từng sản phẩm
   const validatedItems = [];
+  let itemsPrice = 0;
+
   for (const item of orderItems) {
     const product = await Product.findById(item.product);
     if (!product) {
@@ -40,6 +42,9 @@ const createOrder = asyncHandler(async (req, res) => {
       );
     }
 
+    const itemPrice = product.price * item.quantity;
+    itemsPrice += itemPrice;
+
     validatedItems.push({
       ...item,
       name: product.name,
@@ -48,12 +53,18 @@ const createOrder = asyncHandler(async (req, res) => {
     });
   }
 
+  // Tính toán giá
+  const shippingPrice = itemsPrice > 500000 ? 0 : 30000; // Miễn phí ship cho đơn > 500k
+  const taxPrice = Math.round(itemsPrice * 0.1); // 10% thuế
+  const totalPrice = itemsPrice + shippingPrice + taxPrice;
+
   // Tạo đơn hàng mới với thông tin sản phẩm đã xác thực
   const order = new Order({
     orderItems: validatedItems,
     user: req.user._id,
     shippingAddress,
     paymentMethod,
+    itemsPrice,
     taxPrice,
     shippingPrice,
     totalPrice,
@@ -71,8 +82,6 @@ const createOrder = asyncHandler(async (req, res) => {
       status: createdOrder.status,
     });
     await orderHistory.save();
-
-    console.log("Creating order history for order ID:", createdOrder._id);
 
     // Cập nhật số lượng trong kho
     for (const item of validatedItems) {
